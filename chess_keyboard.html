@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>שחמט מקלדת - רשת ועולמי</title>
+    <title>שחמט מקלדת ועכבר - רשת ועולמי</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
 
@@ -30,11 +30,12 @@
         .p1-color { color: #00d2ff; } .p2-color { color: #ff3366; }
         
         .timer-display { font-size: 28px; font-weight: 900; background: rgba(0, 0, 0, 0.5); padding: 5px 15px; border-radius: 8px; margin-top: 10px; font-variant-numeric: tabular-nums; letter-spacing: 2px;}
+        .captured-pieces { min-height: 24px; font-size: 18px; margin-top: 5px; color: #ecf0f1; letter-spacing: 2px;}
         
         #board-container { margin: 20px; padding: 10px; background: #2c3e50; border-radius: 10px; box-shadow: 0 15px 30px rgba(0,0,0,0.5); }
         #chess-board { display: grid; grid-template-columns: repeat(8, 60px); grid-template-rows: repeat(8, 60px); border: 4px solid #111; direction: ltr; }
         
-        .cell { width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; font-size: 40px; position: relative; user-select: none; }
+        .cell { width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; font-size: 40px; position: relative; user-select: none; cursor: pointer; }
         .light { background-color: #f0d9b5; color: #000; } .dark { background-color: #b58863; color: #000; }
         
         .cursor-p1 { outline: 4px solid #00d2ff; outline-offset: -4px; z-index: 10; }
@@ -44,6 +45,7 @@
         .selected { background-color: rgba(241, 196, 15, 0.7) !important; }
         .last-move { background-color: rgba(46, 204, 113, 0.5) !important; }
         .valid-move::after { content: ''; position: absolute; width: 15px; height: 15px; background: rgba(46, 204, 113, 0.8); border-radius: 50%; }
+        .in-check { background-color: rgba(231, 76, 60, 0.8) !important; box-shadow: inset 0 0 20px rgba(192, 57, 43, 1); }
         
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 30, 0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
         .glass-panel { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 30px; text-align: center; max-width: 600px; }
@@ -62,7 +64,7 @@
 </head>
 <body>
     <div class="nav-buttons">
-        <a href="index.html" class="nav-btn">🏠 דף הבית</a>
+        <button onclick="toggleSound()" class="nav-btn" id="sound-btn">🔊 קול פועל</button>
         <button onclick="showStartScreen()" class="nav-btn">🔙 תפריט משחק</button>
     </div>
 
@@ -116,11 +118,13 @@
         <div id="p2-info" class="player-info">
             <div id="p2-name-display" class="p2-color" style="font-weight: bold; font-size: 22px;">שחקן 2</div>
             <div id="p2-timer" class="timer-display">∞</div>
+            <div id="p2-captured" class="captured-pieces"></div>
         </div>
         <div id="turn-indicator" style="font-size: 24px; font-weight: bold; color: #f1c40f;">תור הלבן</div>
         <div id="p1-info" class="player-info active-turn">
             <div id="p1-name-display" class="p1-color" style="font-weight: bold; font-size: 22px;">שחקן 1</div>
             <div id="p1-timer" class="timer-display">∞</div>
+            <div id="p1-captured" class="captured-pieces"></div>
         </div>
     </div>
 
@@ -187,12 +191,20 @@
         let selectedPiece=null, validMoves=[], lastMove=null;
         let p1Name="", p2Name="", gameMode="", aiDepth=3, isComputerThinking=false;
         let castlingRights = {wK:true, wQ:true, bK:true, bQ:true}, enPassantTarget=null;
+        let capturedByWhite = [], capturedByBlack = [];
         
         let audioCtx;
         let isTimerActive = false, p1Time = 0, p2Time = 0, timerInterval = null;
+        let soundEnabled = true;
 
         // --- סאונד ---
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('sound-btn').innerText = soundEnabled ? '🔊 קול פועל' : '🔇 קול כבוי';
+        }
+
         function playSound(type) {
+            if (!soundEnabled) return;
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
             
@@ -281,7 +293,7 @@
             
             setupTimer(timeLimit);
             document.getElementById('start-screen').classList.add('hidden');
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (!audioCtx && soundEnabled) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             initBoard();
         }
 
@@ -295,7 +307,7 @@
             
             setupTimer(timeLimit);
             document.getElementById('start-screen').classList.add('hidden');
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (!audioCtx && soundEnabled) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             initBoard();
         }
 
@@ -317,6 +329,7 @@
             p1Cursor = {x:4,y:7}; p2Cursor = {x:4,y:0};
             selectedPiece = null; validMoves = []; lastMove = null; isComputerThinking = false;
             castlingRights = {wK:true, wQ:true, bK:true, bQ:true}; enPassantTarget = null;
+            capturedByWhite = []; capturedByBlack = [];
             updateUI(); updateTurnIndicator();
         }
 
@@ -337,6 +350,11 @@
                         cell.innerText = PIECES[piece]; 
                         cell.style.color = piece.startsWith('w') ? '#fff' : '#000'; 
                         cell.style.textShadow = piece.startsWith('w') ? '0 2px 4px rgba(0,0,0,0.8)' : '0 2px 4px rgba(255,255,255,0.5)';
+                        
+                        // הדגשת המלך אם הוא בשח
+                        if (piece.charAt(1) === 'K' && piece.charAt(0) === turn && isKingInCheck(turn, board)) {
+                            cell.classList.add('in-check');
+                        }
                     }
                     
                     let activeCursor = turn === 'w' ? p1Cursor : p2Cursor;
@@ -351,12 +369,19 @@
                     if (selectedPiece && selectedPiece.x===x && selectedPiece.y===y) cell.classList.add('selected');
                     if (validMoves.some(m => m.x===x && m.y===y)) cell.classList.add('valid-move');
                     
+                    // הוספת תמיכה בלחיצת עכבר על המשבצת
+                    cell.onclick = () => handleSquareInteraction(x, y);
+
                     boardEl.appendChild(cell);
                 }
             }
         }
 
-        function updateUI() { drawBoard(); }
+        function updateUI() { 
+            drawBoard(); 
+            document.getElementById('p1-captured').innerText = capturedByWhite.join(' ');
+            document.getElementById('p2-captured').innerText = capturedByBlack.join(' ');
+        }
 
         // --- לוגיקת שחמט מלאה וקריאה ---
         function cloneBoard(b) { return b.map(row => [...row]); }
@@ -728,6 +753,16 @@
             let isCapture = (targetPiece !== '' || (move && move.special === 'en_passant'));
             playSound(isCapture ? 'capture' : 'move');
             
+            // שמירת כלים אכולים
+            if (targetPiece !== '') {
+                if (turn === 'w') capturedByWhite.push(PIECES[targetPiece]);
+                else capturedByBlack.push(PIECES[targetPiece]);
+            } else if (move && move.special === 'en_passant') {
+                let epPiece = color === 'w' ? 'bP' : 'wP';
+                if (turn === 'w') capturedByWhite.push(PIECES[epPiece]);
+                else capturedByBlack.push(PIECES[epPiece]);
+            }
+
             lastMove = { fx: fx, fy: fy, tx: tx, ty: ty };
             board[ty][tx] = piece;
             board[fy][fx] = '';
@@ -765,14 +800,42 @@
             updateTurnIndicator();
         }
 
-        // --- מקלדת ---
-        window.addEventListener('keydown', e => {
+        // --- אינטראקציה מאוחדת (עכבר ומקלדת) ---
+        function handleSquareInteraction(x, y) {
             if (!document.getElementById('start-screen').classList.contains('hidden') || isComputerThinking) return;
             
             if (gameMode === '2P_ONLINE') {
                 // מניעת שחקן מלשחק בתור שלא שלו במשחק רשת
                 if ((onlineRole === 'HOST' && turn !== 'w') || (onlineRole === 'CLIENT' && turn !== 'b')) return; 
             }
+
+            // עדכון סמן ויזואלי גם בלחיצת עכבר כדי שיהיה מסונכרן עם המקלדת
+            if (turn === 'w') { p1Cursor.x = x; p1Cursor.y = y; }
+            else { p2Cursor.x = x; p2Cursor.y = y; }
+
+            let p = board[y][x];
+            
+            if (selectedPiece) {
+                if (selectedPiece.x === x && selectedPiece.y === y) {
+                    selectedPiece = null; validMoves = []; // ביטול בחירה
+                }
+                else if (validMoves.some(m => m.x === x && m.y === y)) {
+                    executeMove(selectedPiece.x, selectedPiece.y, x, y); // ביצוע המהלך
+                }
+                else if (p.charAt(0) === turn) {
+                    selectedPiece = {x: x, y: y}; // החלפת בחירת כלי
+                    validMoves = getValidMoves(x, y);
+                }
+            } else if (p.charAt(0) === turn) {
+                selectedPiece = {x: x, y: y}; // בחירת כלי חדש
+                validMoves = getValidMoves(x, y);
+            }
+            updateUI();
+        }
+
+        window.addEventListener('keydown', e => {
+            if (!document.getElementById('start-screen').classList.contains('hidden') || isComputerThinking) return;
+            if (gameMode === '2P_ONLINE' && ((onlineRole === 'HOST' && turn !== 'w') || (onlineRole === 'CLIENT' && turn !== 'b'))) return;
             
             let active = turn === 'w' ? p1Cursor : p2Cursor;
             
@@ -783,24 +846,7 @@
             
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                let p = board[active.y][active.x];
-                
-                if (selectedPiece) {
-                    if (selectedPiece.x === active.x && selectedPiece.y === active.y) {
-                        selectedPiece = null; validMoves = [];
-                    }
-                    else if (validMoves.some(m => m.x === active.x && m.y === active.y)) {
-                        executeMove(selectedPiece.x, selectedPiece.y, active.x, active.y);
-                    }
-                    else if (p.charAt(0) === turn) {
-                        selectedPiece = {x: active.x, y: active.y}; 
-                        validMoves = getValidMoves(active.x, active.y);
-                    }
-                } else if (p.charAt(0) === turn) {
-                    selectedPiece = {x: active.x, y: active.y}; 
-                    validMoves = getValidMoves(active.x, active.y);
-                }
-                updateUI();
+                handleSquareInteraction(active.x, active.y);
             }
         });
 
