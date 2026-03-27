@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>כדורגל קבוצות 5x5 - רשת</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a252c;
+            font-family: 'Heebo', sans-serif;
+            color: white;
+            touch-action: none;
+        }
+
+        /* אנימציות */
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            70% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        /* כפתורי ניווט עליונים */
+        .nav-buttons {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 200;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        /* ממשק משתמש במשחק */
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        #top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 40px;
+            margin-top: 40px;
+        }
+
+        .score-box {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 10px 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .score-val { font-size: 40px; font-weight: 900; margin: 0 20px; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .p1-color { color: #00d2ff; } 
+        .p2-color { color: #ff3366; }
+
+        #timer-box {
+            font-size: 32px;
+            font-weight: 900;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 30px;
+            border-radius: 15px;
+            border: 2px solid #f1c40f;
+            box-shadow: 0 0 20px rgba(241, 196, 15, 0.3);
+            letter-spacing: 2px;
+        }
+
+        #goal-message {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 100px;
+            font-weight: 900;
+            color: #fff;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px #f1c40f, 0 0 40px #f1c40f, 0 0 80px #e67e22, 5px 5px 0px #000;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .show-goal { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        /* מסכי תפריט זכוכית */
+        .overlay-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 30, 0.9);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            z-index: 100;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px 40px;
+            text-align: center;
+            max-width: 650px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+
+        .controls-info {
+            font-size: 16px;
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: right;
+            border: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .network-panel {
+            background: rgba(0,0,0,0.4);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .network-panel input {
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.5);
+            color: white;
+            font-size: 16px;
+            margin: 5px;
+            text-align: center;
+            width: 70%;
+            font-family: inherit;
+            outline: none;
+        }
+        .network-panel input:focus { border-color: #f1c40f; }
+
+        .btn {
+            background: linear-gradient(45deg, #f1c40f, #e67e22);
+            color: #000;
+            font-size: 20px;
+            font-weight: 900;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s;
+            font-family: inherit;
+        }
+        .btn:hover { transform: scale(1.05); }
+        .hidden { display: none !important; }
+        
+        canvas { display: block; width: 100%; height: 100%; }
+        
+    </style>
+    <!-- ספריית PeerJS לתקשורת רשת -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+
+    <div class="nav-buttons">
+        <a href="index.html" class="nav-btn">🏠 דף הבית</a>
+        <button onclick="showStartScreen()" class="nav-btn">🔙 תפריט ראשי</button>
+    </div>
+
+    <div id="ui-layer">
+        <div id="top-bar">
+            <div class="score-box" style="border-right: 5px solid #ff3366;">
+                <div class="p2-color" style="font-weight: bold; font-size: 18px;">שחקן 2<br><small>W,A,S,D</small></div>
+                <div id="score2" class="score-val p2-color">0</div>
+            </div>
+            
+            <div id="timer-box">02:00</div>
+            
+            <div class="score-box" style="border-left: 5px solid #00d2ff;">
+                <div id="score1" class="score-val p1-color">0</div>
+                <div class="p1-color" style="font-weight: bold; font-size: 18px;">שחקן 1<br><small>חצים</small></div>
+            </div>
+        </div>
+        <div id="goal-message">שער!!!</div>
+    </div>
+
+    <!-- מסך פתיחה -->
+    <div id="start-screen" class="overlay-screen">
+        <div class="glass-panel">
+            <h1 style="color: #f1c40f; margin-top:0; font-size: 48px;">כדורגל 5x5</h1>
+            
+            <div class="controls-info">
+                <strong style="color: #f1c40f; font-size: 18px;">טריקים מיוחדים לשליטה בכדור:</strong><br>
+                1. <strong>הצמדה:</strong> החזק <strong>צ' (M)</strong> או <strong>ר' (R)</strong> כדי שהכדור יידבק לרגלי השחקן שלך בזמן ריצה.<br>
+                2. <strong>בעיטת גובה (Lob):</strong> לחץ <strong>רווח (Space)</strong> כדי להקפיץ את הכדור מעל שחקני היריב!
+            </div>
+
+            <button class="btn" onclick="startGame('LOCAL')">שחק מקומי (על אותו מחשב)</button>
+            
+            <div class="network-panel">
+                <h3 style="margin-top:0; color: #fff;">משחק רשת - שחק נגד חבר מרחוק</h3>
+                <p>קוד האירוח שלך: <strong id="my-peer-id" style="color: #00d2ff; letter-spacing: 1px;">מתחבר לשרת...</strong></p>
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 15px 0;">
+                <input type="text" id="friend-id" placeholder="הדבק כאן קוד של חבר כדי להצטרף">
+                <br>
+                <button class="btn" style="padding: 8px 20px; font-size: 18px;" onclick="joinNetworkGame()">הצטרף לחדר</button>
+                <p id="net-status" style="color: #f1c40f; font-weight: bold; margin-bottom: 0; margin-top: 10px;"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- מסך סיום -->
+    <div id="game-over-screen" class="overlay-screen hidden">
+        <div class="glass-panel">
+            <h1 id="winner-title" style="color: #f1c40f; font-size: 48px;">המשחק נגמר!</h1>
+            <p id="winner-text" style="font-size: 32px; font-weight: bold; margin-bottom: 30px;">...</p>
+            <button class="btn" onclick="showStartScreen()">חזור לתפריט</button>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // משתני משחק
+        let width, height;
+        let gameState = 'START'; 
+        let gameMode = 'LOCAL'; // LOCAL, ONLINE_HOST, ONLINE_CLIENT
+        let score1 = 0, score2 = 0;
+        let timeLeft = 120; // משחק של 2 דקות
+        let lastTimestamp = 0;
+
+        // נתוני קבוצות
+        let team1 = []; 
+        let team2 = []; 
+        let activePlayer1 = null;
+        let activePlayer2 = null;
+        let lastSwitchTime1 = 0;
+        let lastSwitchTime2 = 0;
+        const SWITCH_COOLDOWN = 800; // זמן השהייה בין חילופים למניעת הבהובים
+
+        // אובייקטים ומידות (נוסף ציר Z לכדור!)
+        const ball = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, radius: 12, mass: 1 };
+        const PLAYER_RADIUS = 20;
+        const PLAYER_MASS = 5;
+        const FIELD_FRICTION = 0.92;
+        const BALL_FRICTION = 0.96;
+
+        let localKeys = {};
+        // פקודות רשת מורחבות כולל stick ו-lob
+        let networkKeys = { up: false, down: false, left: false, right: false, stick: false, lob: false };
+
+        // --- ניהול רשת באמצעות PeerJS ---
+        let peer = null;
+        let conn = null;
+
+        function initPeer() {
+            peer = new Peer();
+            peer.on('open', id => { 
+                document.getElementById('my-peer-id').innerText = id; 
+            });
+            peer.on('connection', c => {
+                conn = c; 
+                setupConnection();
+                gameMode = 'ONLINE_HOST';
+                document.getElementById('net-status').innerText = "שחקן התחבר! המשחק מתחיל...";
+                setTimeout(() => startGame('ONLINE_HOST'), 1000);
+            });
+        }
+
+        function joinNetworkGame() {
+            const friendId = document.getElementById('friend-id').value.trim();
+            if (!friendId) return;
+            document.getElementById('net-status').innerText = "מתחבר...";
+            conn = peer.connect(friendId);
+            conn.on('open', () => {
+                setupConnection();
+                gameMode = 'ONLINE_CLIENT';
+                document.getElementById('net-status').innerText = "מחובר למארח בהצלחה!";
+                startGame('ONLINE_CLIENT');
+            });
+        }
+
+        function setupConnection() {
+            conn.on('data', data => {
+                // המארח מקבל פקודות מקלדת מהלקוח
+                if (data.type === 'keys' && gameMode === 'ONLINE_HOST') {
+                    networkKeys = data.keys;
+                }
+                // הלקוח מקבל עדכון מצב מלא מהמארח ומצייר את המסך לפיו
+                if (data.type === 'state' && gameMode === 'ONLINE_CLIENT') {
+                    ball.x = data.b.x; ball.y = data.b.y; ball.z = data.b.z;
+                    
+                    data.t1.forEach((p, i) => { team1[i].x = p.x; team1[i].y = p.y; });
+                    data.t2.forEach((p, i) => { team2[i].x = p.x; team2[i].y = p.y; });
+                    
+                    score1 = data.s1; score2 = data.s2;
+                    timeLeft = data.tl;
+                    
+                    document.getElementById('score1').innerText = score1;
+                    document.getElementById('score2').innerText = score2;
+                    
+                    activePlayer1 = team1[data.a1]; 
+                    activePlayer2 = team2[data.a2];
+                }
+            });
+        }
+
+        // --- בניית קבוצות וטקטיקה ---
+        function createTeams() {
+            team1 = [];
+            team2 = [];
+            
+            // קבוצה 1 (כחולה - מגינה ימין)
+            const formation1 = [
+                { rx: 0.9, ry: 0.5, isGK: true },
+                { rx: 0.75, ry: 0.3, isGK: false },
+                { rx: 0.75, ry: 0.7, isGK: false },
+                { rx: 0.6, ry: 0.4, isGK: false },
+                { rx: 0.6, ry: 0.6, isGK: false }
+            ];
+
+            // קבוצה 2 (אדומה - מגינה שמאל)
+            const formation2 = [
+                { rx: 0.1, ry: 0.5, isGK: true },
+                { rx: 0.25, ry: 0.3, isGK: false },
+                { rx: 0.25, ry: 0.7, isGK: false },
+                { rx: 0.4, ry: 0.4, isGK: false },
+                { rx: 0.4, ry: 0.6, isGK: false }
+            ];
+
+            const addPlayer = (team, form, colorLight, colorDark) => {
+                form.forEach(pos => {
+                    team.push({
+                        x: width * pos.rx, y: height * pos.ry,
+                        vx: 0, vy: 0,
+                        radius: PLAYER_RADIUS,
+                        mass: pos.isGK ? PLAYER_MASS * 1.5 : PLAYER_MASS,
+                        colorLight: colorLight, colorDark: colorDark,
+                        speed: pos.isGK ? 0.3 : 0.6,
+                        maxSpeed: 4.5,
+                        baseRx: pos.rx, baseRy: pos.ry,
+                        isGK: pos.isGK || false
+                    });
+                });
+            };
+
+            addPlayer(team1, formation1, '#00d2ff', '#005c8a');
+            addPlayer(team2, formation2, '#ff3366', '#8a002b');
+        }
+
+        // --- אתחול ואירועי חלון ---
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            if (gameState === 'START' || gameState === 'OVER') {
+                createTeams();
+                resetPositions();
+            }
+        }
+
+        window.addEventListener('resize', resize);
+        window.addEventListener('keydown', e => { localKeys[e.key.toLowerCase()] = true; });
+        window.addEventListener('keyup', e => { localKeys[e.key.toLowerCase()] = false; });
+
+        function resetPositions() {
+            ball.x = width / 2; ball.y = height / 2; ball.z = 0;
+            ball.vx = 0; ball.vy = 0; ball.vz = 0;
+            
+            team1.forEach(p => { p.x = width * p.baseRx; p.y = height * p.baseRy; p.vx = 0; p.vy = 0; });
+            team2.forEach(p => { p.x = width * p.baseRx; p.y = height * p.baseRy; p.vx = 0; p.vy = 0; });
+            
+            lastSwitchTime1 = 0;
+            lastSwitchTime2 = 0;
+            updateActivePlayers(performance.now());
+        }
+
+        function showStartScreen() {
+            gameState = 'START';
+            document.getElementById('start-screen').classList.remove('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+            if (conn) { conn.close(); conn = null; }
+            if (!peer) initPeer();
+        }
+
+        function startGame(mode) {
+            gameMode = mode;
+            score1 = 0; score2 = 0;
+            timeLeft = 120;
+            document.getElementById('score1').innerText = score1;
+            document.getElementById('score2').innerText = score2;
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+            
+            createTeams();
+            resetPositions();
+            gameState = 'PLAYING';
+        }
+
+        // --- לוגיקת משחק ופיזיקה ---
+        function updateActivePlayers(currentTime) {
+            const findClosest = (team) => {
+                let closest = null, minDist = Infinity;
+                team.forEach(p => {
+                    const dist = (p.x - ball.x)**2 + (p.y - ball.y)**2;
+                    if (dist < minDist) { minDist = dist; closest = p; }
+                });
+                return closest;
+            };
+
+            const newA1 = findClosest(team1);
+            if (newA1 !== activePlayer1 && (!activePlayer1 || currentTime - lastSwitchTime1 > SWITCH_COOLDOWN)) {
+                activePlayer1 = newA1; lastSwitchTime1 = currentTime;
+            }
+
+            const newA2 = findClosest(team2);
+            if (newA2 !== activePlayer2 && (!activePlayer2 || currentTime - lastSwitchTime2 > SWITCH_COOLDOWN)) {
+                activePlayer2 = newA2; lastSwitchTime2 = currentTime;
+            }
+        }
+
+        // הפעלת טריקים (הצמדה והקפצה)
+        function applyBallMechanics(player, inputs) {
+            const dx = ball.x - player.x;
+            const dy = ball.y - player.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            // הצמדה (Stick) - בתנאי שהכדור קרוב ושלא עף באוויר
+            if (inputs.stick && dist < player.radius + ball.radius + 20 && ball.z < 10) {
+                const angle = Math.atan2(dy, dx);
+                const offset = player.radius + ball.radius + 2;
+                ball.x = player.x + Math.cos(angle) * offset;
+                ball.y = player.y + Math.sin(angle) * offset;
+                ball.vx = player.vx; 
+                ball.vy = player.vy;
+            }
+            
+            // בעיטת גובה (Lob)
+            if (inputs.lob && dist < player.radius + ball.radius + 25 && ball.z < 10) {
+                const angle = Math.atan2(dy, dx);
+                ball.vz = 14; // כוח מתפרץ כלפי מעלה בציר Z
+                ball.vx = Math.cos(angle) * 12 + player.vx;
+                ball.vy = Math.sin(angle) * 12 + player.vy;
+            }
+        }
+
+        function resolveCollision(obj1, obj2, isBall = false) {
+            // אם זה כדור והוא גבוה באוויר - אין התנגשות עם השחקנים
+            if (isBall && ball.z > 25) return; 
+
+            const dx = obj2.x - obj1.x;
+            const dy = obj2.y - obj1.y;
+            const distance = Math.sqrt(dx*dx + dy*dy);
+            const minDist = obj1.radius + obj2.radius;
+
+            if (distance < minDist) {
+                const overlap = (minDist - distance) / 2;
+                const nx = dx / distance;
+                const ny = dy / distance;
+
+                obj1.x -= nx * overlap; obj1.y -= ny * overlap;
+                obj2.x += nx * overlap; obj2.y += ny * overlap;
+
+                const kx = obj1.vx - obj2.vx;
+                const ky = obj1.vy - obj2.vy;
+                const p = 2 * (nx * kx + ny * ky) / (obj1.mass + obj2.mass);
+
+                let kickForce = isBall ? 1.0 : 0.5;
+
+                obj1.vx -= p * obj2.mass * nx * kickForce;
+                obj1.vy -= p * obj2.mass * ny * kickForce;
+                obj2.vx += p * obj1.mass * nx * kickForce;
+                obj2.vy += p * obj1.mass * ny * kickForce;
+            }
+        }
+
+        function updatePhysics() {
+            // בינה מלאכותית לשחקנים לא פעילים
+            const applyAI = (team, activeP) => {
+                team.forEach(p => {
+                    if (p === activeP) return;
+                    let targetX = width * p.baseRx;
+                    let targetY = height * p.baseRy;
+
+                    if (p.isGK) {
+                        targetY = Math.max(height/2 - 100, Math.min(height/2 + 100, ball.y));
+                    } else {
+                        targetX += (ball.x - width/2) * 0.3;
+                    }
+
+                    const d = Math.sqrt((targetX - p.x)**2 + (targetY - p.y)**2);
+                    if (d > 10) {
+                        p.vx += ((targetX - p.x)/d) * p.speed * 0.4;
+                        p.vy += ((targetY - p.y)/d) * p.speed * 0.4;
+                    }
+                });
+            };
+            
+            applyAI(team1, activePlayer1);
+            applyAI(team2, activePlayer2);
+
+            const allPlayers = [...team1, ...team2];
+            
+            // חיכוך ותנועת שחקנים
+            allPlayers.forEach(p => {
+                p.vx *= FIELD_FRICTION;
+                p.vy *= FIELD_FRICTION;
+                p.x += p.vx;
+                p.y += p.vy;
+            });
+
+            // פיזיקת כדור - כולל ציר Z
+            ball.z += ball.vz;
+            if (ball.z > 0) {
+                ball.vz -= 0.6; // כוח כבידה מושך למטה
+            } else {
+                ball.z = 0;
+                if (ball.vz < -3) ball.vz *= -0.5; // קפיצה (Bounce) מהדשא
+                else ball.vz = 0;
+            }
+
+            ball.vx *= BALL_FRICTION;
+            ball.vy *= BALL_FRICTION;
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            // בדיקת התנגשויות
+            for (let i = 0; i < allPlayers.length; i++) {
+                for (let j = i + 1; j < allPlayers.length; j++) {
+                    resolveCollision(allPlayers[i], allPlayers[j]);
+                }
+            }
+            allPlayers.forEach(p => resolveCollision(p, ball, true));
+
+            // גבולות ושערים
+            const goalTop = height / 2 - 140;
+            const goalBottom = height / 2 + 140;
+
+            const checkWall = (obj, isBall) => {
+                if (obj.y - obj.radius < 0) { obj.y = obj.radius; obj.vy *= -0.5; }
+                if (obj.y + obj.radius > height) { obj.y = height - obj.radius; obj.vy *= -0.5; }
+
+                const inGoal = obj.y > goalTop && obj.y < goalBottom;
+                
+                if (obj.x - obj.radius < 0) {
+                    // כדי להבקיע שער, הכדור לא יכול לעוף גבוה מעל המשקוף (נניח z < 50)
+                    if (isBall && inGoal && ball.z < 50) scoreGoal(1); 
+                    else { obj.x = obj.radius; obj.vx *= -0.5; }
+                }
+                if (obj.x + obj.radius > width) {
+                    if (isBall && inGoal && ball.z < 50) scoreGoal(2); 
+                    else { obj.x = width - obj.radius; obj.vx *= -0.5; }
+                }
+            };
+
+            allPlayers.forEach(p => checkWall(p, false));
+            checkWall(ball, true);
+        }
+
+        function scoreGoal(playerNum) {
+            gameState = 'GOAL';
+            if (playerNum === 1) score1++; else score2++;
+            
+            document.getElementById('score1').innerText = score1;
+            document.getElementById('score2').innerText = score2;
+
+            const msg = document.getElementById('goal-message');
+            msg.classList.add('show-goal');
+
+            setTimeout(() => {
+                msg.classList.remove('show-goal');
+                if(timeLeft > 0) {
+                    resetPositions();
+                    gameState = 'PLAYING';
+                } else {
+                    endGame();
+                }
+            }, 2500);
+        }
+
+        function endGame() {
+            gameState = 'OVER';
+            const screen = document.getElementById('game-over-screen');
+            const winnerText = document.getElementById('winner-text');
+            
+            if (score1 > score2) winnerText.innerHTML = '<span style="color:#00d2ff;">קבוצה כחולה מנצחת!</span>';
+            else if (score2 > score1) winnerText.innerHTML = '<span style="color:#ff3366;">קבוצה אדומה מנצחת!</span>';
+            else winnerText.innerHTML = '<span style="color:#f1c40f;">תיקו! איזה מתח!</span>';
+            
+            screen.classList.remove('hidden');
+        }
+
+        // --- ציור תלת-ממדי (Canvas) ---
+        function drawField() {
+            // רקע פסים לדשא
+            ctx.fillStyle = '#1e3d2f'; ctx.fillRect(0, 0, width, height);
+            ctx.fillStyle = '#183326';
+            for(let i=0; i<width; i+=80) { if((i/80)%2 === 0) ctx.fillRect(i, 0, 80, height); }
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(width/2, 0); ctx.lineTo(width/2, height); ctx.stroke();
+            ctx.beginPath(); ctx.arc(width/2, height/2, 100, 0, Math.PI*2); ctx.stroke();
+            
+            const goalTop = height / 2 - 140;
+            const goalHeight = 280;
+            
+            ctx.strokeRect(-10, goalTop - 80, 200, goalHeight + 160);
+            ctx.strokeRect(width - 190, goalTop - 80, 200, goalHeight + 160);
+            
+            // שערים - רשת
+            ctx.fillStyle = 'rgba(255, 51, 102, 0.2)'; ctx.fillRect(0, goalTop, 40, goalHeight);
+            ctx.fillStyle = 'rgba(0, 210, 255, 0.2)'; ctx.fillRect(width - 40, goalTop, 40, goalHeight);
+        }
+
+        function drawPlayer(obj, isActive) {
+            // זוהר לשחקן פעיל
+            if (isActive) {
+                ctx.beginPath(); ctx.arc(obj.x, obj.y, obj.radius + 8, 0, Math.PI * 2);
+                ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 4;
+                ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 10;
+                ctx.stroke(); ctx.shadowBlur = 0;
+            }
+
+            // צל לשחקן
+            ctx.beginPath(); ctx.arc(obj.x + 5, obj.y + 5, obj.radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill(); 
+
+            // גוף השחקן (גרדיאנט תלת-ממדי)
+            let grad = ctx.createRadialGradient(obj.x - obj.radius/3, obj.y - obj.radius/3, obj.radius/5, obj.x, obj.y, obj.radius);
+            grad.addColorStop(0, obj.colorLight);
+            grad.addColorStop(1, obj.colorDark);
+
+            ctx.beginPath(); ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
+            ctx.fillStyle = grad; ctx.fill();
+            
+            // סימן שוער
+            if (obj.isGK) {
+                ctx.beginPath(); ctx.arc(obj.x, obj.y, obj.radius/2, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fill();
+            }
+        }
+
+        function drawBall() {
+            // צל של הכדור (הצל נשאר על הרצפה ומטשטש כשהכדור עולה)
+            ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
+            ctx.fillStyle = `rgba(0,0,0,${Math.max(0.1, 0.5 - ball.z*0.01)})`; 
+            ctx.fill(); 
+            
+            // ציור הכדור עצמו (זז למעלה בציר ה-Y הויזואלי וגדל מעט כדי ליצור תלת-ממד)
+            const renderY = ball.y - ball.z; 
+            const scale = 1 + ball.z * 0.012; 
+            
+            ctx.save(); 
+            ctx.translate(ball.x, renderY); 
+            ctx.scale(scale, scale);
+            
+            // כדור בסיס
+            ctx.beginPath(); ctx.arc(0, 0, ball.radius, 0, Math.PI*2); 
+            ctx.fillStyle='#fff'; ctx.fill();
+            
+            // תבנית משושים פשוטה על הכדור
+            ctx.fillStyle='#222'; 
+            ctx.beginPath(); ctx.arc(0, 0, ball.radius/2, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(-5, -4, ball.radius/3, 0, Math.PI*2); ctx.fill();
+            
+            ctx.restore();
+        }
+
+        // --- לולאת המשחק ---
+        function gameLoop(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const dt = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+
+            if (gameState === 'PLAYING') {
+                if (gameMode === 'ONLINE_CLIENT') {
+                    // קליינט רק שולח הקשות מקלדת למארח
+                    let myInput = {
+                        up: localKeys['arrowup'], down: localKeys['arrowdown'], 
+                        left: localKeys['arrowleft'], right: localKeys['arrowright'], 
+                        stick: localKeys['m'] || localKeys['צ'] || localKeys['r'] || localKeys['ר'], 
+                        lob: localKeys[' ']
+                    };
+                    if (conn) conn.send({ type: 'keys', keys: myInput });
+                } else {
+                    // המארח (או משחק מקומי) מנהל את כל הפיזיקה והזמן
+                    timeLeft -= dt;
+                    if (timeLeft <= 0) { timeLeft = 0; if (gameState !== 'GOAL') endGame(); }
+                    
+                    const m = Math.floor(timeLeft / 60); const s = Math.floor(timeLeft % 60);
+                    document.getElementById('timer-box').innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
+                    updateActivePlayers(timestamp);
+
+                    // קריאת פקודות: שחקן 1 (מקומי תמיד), שחקן 2 (מקומי או מהרשת)
+                    let p1In = {
+                        up: localKeys['arrowup'], down: localKeys['arrowdown'], 
+                        left: localKeys['arrowleft'], right: localKeys['arrowright'], 
+                        stick: localKeys['m'] || localKeys['צ'] || localKeys['r'] || localKeys['ר'], 
+                        lob: localKeys[' ']
+                    };
+                    
+                    let p2In = gameMode === 'ONLINE_HOST' ? networkKeys : {
+                        up: localKeys['w'] || localKeys['׳'], down: localKeys['s'] || localKeys['ד'], 
+                        left: localKeys['a'] || localKeys['ש'], right: localKeys['d'] || localKeys['ג'], 
+                        stick: localKeys['q'] || localKeys['/'], lob: localKeys['e'] || localKeys['ק']
+                    };
+
+                    // תנועה שחקן 1
+                    if(p1In.up) activePlayer1.vy -= activePlayer1.speed; 
+                    if(p1In.down) activePlayer1.vy += activePlayer1.speed;
+                    if(p1In.left) activePlayer1.vx -= activePlayer1.speed; 
+                    if(p1In.right) activePlayer1.vx += activePlayer1.speed;
+                    applyBallMechanics(activePlayer1, p1In);
+
+                    // תנועה שחקן 2
+                    if(p2In.up) activePlayer2.vy -= activePlayer2.speed; 
+                    if(p2In.down) activePlayer2.vy += activePlayer2.speed;
+                    if(p2In.left) activePlayer2.vx -= activePlayer2.speed; 
+                    if(p2In.right) activePlayer2.vx += activePlayer2.speed;
+                    applyBallMechanics(activePlayer2, p2In);
+
+                    // הגבלת מהירות
+                    [activePlayer1, activePlayer2].forEach(obj => {
+                        const s = Math.sqrt(obj.vx*obj.vx + obj.vy*obj.vy);
+                        if (s > obj.maxSpeed) { obj.vx = (obj.vx/s)*obj.maxSpeed; obj.vy = (obj.vy/s)*obj.maxSpeed; }
+                    });
+
+                    updatePhysics();
+
+                    // סנכרון נתונים למחשב של הלקוח
+                    if (gameMode === 'ONLINE_HOST' && conn) {
+                        conn.send({ 
+                            type: 'state', 
+                            b: {x: ball.x, y: ball.y, z: ball.z}, 
+                            t1: team1.map(p => ({x: p.x, y: p.y})), 
+                            t2: team2.map(p => ({x: p.x, y: p.y})), 
+                            s1: score1, s2: score2, tl: timeLeft, 
+                            a1: team1.indexOf(activePlayer1), a2: team2.indexOf(activePlayer2) 
+                        });
+                    }
+                }
+            }
+
+            // רינדור ויזואלי (קורה גם אצל המארח וגם אצל הלקוח)
+            ctx.clearRect(0, 0, width, height);
+            drawField();
+            team1.forEach(p => drawPlayer(p, p === activePlayer1));
+            team2.forEach(p => drawPlayer(p, p === activePlayer2));
+            drawBall();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // הפעלה
+        resize();
+        initPeer();
+        requestAnimationFrame(gameLoop);
+
+    </script>
+</body>
+</html>
