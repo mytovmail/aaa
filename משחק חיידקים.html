@@ -70,7 +70,6 @@
         }
         #death-screen h2 { color: #e74c3c; font-size: 45px; margin-top: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
 
-        /* חלונית הוראות */
         #instructions-modal {
             display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: rgba(255, 255, 255, 0.95); color: #2c3e50; padding: 30px; border-radius: 20px;
@@ -88,7 +87,6 @@
         }
         #instructions-modal .close-btn:active { transform: scale(0.95); }
 
-        /* קבוצת כפתורי שליטה למסכי מגע (ומחשב) */
         #controls-container {
             position: absolute; bottom: 30px; right: 30px; display: none; gap: 15px; pointer-events: auto; z-index: 50;
         }
@@ -106,55 +104,22 @@
         #shoot-btn:active { transform: scale(0.9); background: rgba(41, 128, 185, 0.95); }
         
         @media (max-width: 768px) { #controls-container { display: flex; } }
-        /* מציג כפתורים גם במחשב למי שמעדיף ללחוץ בעכבר */
-        @media (min-width: 769px) { #controls-container { display: flex; opacity: 0.8; } }
-    </style>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
-</head>
-        #shoot-btn { background: rgba(52, 152, 219, 0.85); }
-        #shoot-btn:active { transform: scale(0.9); background: rgba(41, 128, 185, 0.95); }
-        
-        @media (max-width: 768px) { #controls-container { display: flex; } }
-        /* מציג כפתורים גם במחשב למי שמעדיף ללחוץ בעכבר */
         @media (min-width: 769px) { #controls-container { display: flex; opacity: 0.8; } }
 
         .back-to-portal-btn {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(5px);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 30px;
-            text-decoration: none;
-            font-family: sans-serif;
-            font-weight: bold;
-            z-index: 9999;
-            border: 1px solid rgba(255,255,255,0.2);
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            position: fixed; top: 20px; right: 20px; background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(5px); color: white; padding: 10px 20px; border-radius: 30px;
+            text-decoration: none; font-family: sans-serif; font-weight: bold; z-index: 9999;
+            border: 1px solid rgba(255,255,255,0.2); transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
 
-        .back-to-portal-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: scale(1.05);
-            border-color: #f1c40f;
-            color: #f1c40f;
-        }
+        .back-to-portal-btn:hover { background: rgba(255, 255, 255, 0.1); transform: scale(1.05); border-color: #f1c40f; color: #f1c40f; }
     </style>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
 </head>
 <body>
 
     <a href="index.html" class="back-to-portal-btn">🏠 חזרה לפורטל</a>
-
-    <div id="message-box"></div>
-
-    <div id="mass-display">
-<body>
 
     <div id="message-box"></div>
 
