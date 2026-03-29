@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>משחק חיידקים - גרסה מקצועית</title>
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+            background-color: #f2fbff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none;
+        }
+
+        #gameCanvas { display: block; width: 100%; height: 100%; }
+
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        #main-menu {
+            pointer-events: auto; background: rgba(255, 255, 255, 0.95); padding: 40px;
+            border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); text-align: center;
+            max-width: 400px; width: 90%; transition: opacity 0.3s ease;
+        }
+
+        h1 { color: #2c3e50; margin-top: 0; font-size: 32px; }
+        p.subtitle { color: #7f8c8d; margin-bottom: 25px; }
+
+        input[type="text"] {
+            width: 80%; padding: 12px 20px; margin: 10px 0 25px 0; border: 2px solid #bdc3c7;
+            border-radius: 25px; font-size: 18px; outline: none; transition: border-color 0.3s; text-align: center; font-family: inherit;
+        }
+        input[type="text"]:focus { border-color: #3498db; }
+
+        .btn {
+            display: block; width: 100%; padding: 15px; margin-bottom: 15px; border: none;
+            border-radius: 25px; font-size: 18px; font-weight: bold; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; font-family: inherit;
+        }
+
+        .btn-primary { background: linear-gradient(135deg, #3498db, #2980b9); color: white; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4); }
+        .btn-secondary { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4); }
+        .btn:active { transform: translateY(2px); box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+
+        #leaderboard {
+            position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.6); color: white;
+            padding: 15px; border-radius: 12px; min-width: 150px; display: none; font-size: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        #leaderboard h3 { margin: 0 0 10px 0; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 5px; }
+        #leaderboard ol { margin: 0; padding-right: 25px; padding-left: 0; }
+        #leaderboard li { margin-bottom: 5px; font-weight: bold; }
+
+        #mass-display {
+            position: absolute; top: 20px; left: 20px; background: rgba(0, 0, 0, 0.6); color: #f1c40f;
+            padding: 10px 20px; border-radius: 25px; font-size: 20px; font-weight: bold; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        #high-score-display {
+            font-size: 14px; color: #bdc3c7; display: block; margin-top: 5px; font-weight: normal;
+        }
+
+        #message-box {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(231, 76, 60, 0.95);
+            color: white; padding: 10px 25px; border-radius: 20px; display: none; font-weight: bold; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        #death-screen {
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85); color: white; padding: 40px; border-radius: 20px; text-align: center; pointer-events: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        #death-screen h2 { color: #e74c3c; font-size: 45px; margin-top: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+
+        /* חלונית הוראות */
+        #instructions-modal {
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95); color: #2c3e50; padding: 30px; border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3); text-align: right; max-width: 500px; width: 90%;
+            max-height: 80vh; overflow-y: auto; pointer-events: auto; z-index: 100;
+        }
+        #instructions-modal h2 { color: #2980b9; margin-top: 0; text-align: center; font-size: 28px; }
+        #instructions-modal h3 { color: #e67e22; margin-bottom: 5px; font-size: 20px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        #instructions-modal ul { padding-right: 20px; margin-top: 5px; font-size: 16px; line-height: 1.5; }
+        #instructions-modal li { margin-bottom: 8px; }
+        #instructions-modal .close-btn {
+            background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 20px;
+            font-size: 16px; font-weight: bold; cursor: pointer; display: block; margin: 20px auto 0 auto;
+            box-shadow: 0 4px 10px rgba(231, 76, 60, 0.4); transition: transform 0.1s;
+        }
+        #instructions-modal .close-btn:active { transform: scale(0.95); }
+
+        /* קבוצת כפתורי שליטה למסכי מגע (ומחשב) */
+        #controls-container {
+            position: absolute; bottom: 30px; right: 30px; display: none; gap: 15px; pointer-events: auto; z-index: 50;
+        }
+        
+        .action-btn {
+            width: 70px; height: 70px; border-radius: 50%; color: white; border: 4px solid rgba(255,255,255,0.5);
+            font-size: 14px; font-weight: bold; box-shadow: 0 5px 20px rgba(0,0,0,0.4); user-select: none;
+            touch-action: manipulation; line-height: 1.2; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        
+        #boost-btn { background: rgba(231, 76, 60, 0.85); }
+        #boost-btn:active { transform: scale(0.9); background: rgba(192, 57, 43, 0.95); }
+        
+        #shoot-btn { background: rgba(52, 152, 219, 0.85); }
+        #shoot-btn:active { transform: scale(0.9); background: rgba(41, 128, 185, 0.95); }
+        
+        @media (max-width: 768px) { #controls-container { display: flex; } }
+        /* מציג כפתורים גם במחשב למי שמעדיף ללחוץ בעכבר */
+        @media (min-width: 769px) { #controls-container { display: flex; opacity: 0.8; } }
+    </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
+</head>
+        #shoot-btn { background: rgba(52, 152, 219, 0.85); }
+        #shoot-btn:active { transform: scale(0.9); background: rgba(41, 128, 185, 0.95); }
+        
+        @media (max-width: 768px) { #controls-container { display: flex; } }
+        /* מציג כפתורים גם במחשב למי שמעדיף ללחוץ בעכבר */
+        @media (min-width: 769px) { #controls-container { display: flex; opacity: 0.8; } }
+
+        .back-to-portal-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(5px);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-family: sans-serif;
+            font-weight: bold;
+            z-index: 9999;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .back-to-portal-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.05);
+            border-color: #f1c40f;
+            color: #f1c40f;
+        }
+    </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
+</head>
+<body>
+
+    <a href="index.html" class="back-to-portal-btn">🏠 חזרה לפורטל</a>
+
+    <div id="message-box"></div>
+
+    <div id="mass-display">
+<body>
+
+    <div id="message-box"></div>
+
+    <div id="mass-display">
+        גודל: <span id="current-mass">20</span>
+        <span id="high-score-display">שיא אישי: <span id="best-mass">20</span></span>
+    </div>
+
+    <div id="leaderboard">
+        <h3>הכי גדולים במפה</h3>
+        <ol id="lb-list"></ol>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        <div id="main-menu" class="menu">
+            <h1>חיידקים ברשת</h1>
+            <p class="subtitle">הגרסה המקצועית והמהירה</p>
+            
+            <input type="text" id="playerName" placeholder="איך קוראים לך?" maxlength="15">
+            
+            <button class="btn btn-primary" onclick="startLocalGame()">שחק נגד המחשב</button>
+            <button class="btn btn-secondary" style="background: linear-gradient(135deg, #e67e22, #d35400);" onclick="hostGame()">צור חדר (Host)</button>
+            <button class="btn btn-secondary" onclick="joinGameUI()">הצטרף לחדר (Join)</button>
+            
+            <button class="btn" style="background: #ecf0f1; color: #7f8c8d; box-shadow: none; border: 2px solid #bdc3c7; margin-top: 10px;" onclick="showInstructions()">📖 איך משחקים?</button>
+        </div>
+
+        <div id="death-screen">
+            <h2>נאכלת!</h2>
+            <p style="font-size: 22px;">הגעת לגודל: <span id="final-score" style="color: #f1c40f; font-weight: bold; font-size: 30px;">0</span></p>
+            <br>
+            <button class="btn btn-primary" onclick="resetGame()">חזור לתפריט</button>
+        </div>
+        
+        <div id="controls-container">
+            <button id="shoot-btn" class="action-btn">ירי<br><small>(W)</small></button>
+            <button id="boost-btn" class="action-btn">ספרינט<br><small>(Space)</small></button>
+        </div>
+        
+        <!-- חלונית מדריך למשתמש -->
+        <div id="instructions-modal">
+            <h2>מדריך למשחק</h2>
+            
+            <h3>🎯 מטרת המשחק</h3>
+            <ul>
+                <li><strong>לאכול ולגדול:</strong> אכול את הנקודות הצבעוניות הפזורות במפה כדי לגדול.</li>
+                <li><strong>לטרוף אחרים:</strong> אם אתה גדול יותר משחקן או בוט אחר (לפחות ב-5%), תוכל לבלוע אותו ולהרוויח את המסה שלו.</li>
+                <li><strong>לברוח:</strong> היזהר משחקנים שגדולים ממך – הם ינסו לבלוע אותך!</li>
+            </ul>
+
+            <h3>🎮 איך שולטים?</h3>
+            <ul>
+                <li><strong>תנועה:</strong> הזז את העכבר (או החלק את האצבע על המסך). החיידק שלך יעקוב אחריך.</li>
+                <li><strong>ספרינט (רווח / כפתור אדום):</strong> נותן לך בוסט של מהירות כדי לברוח או לרדוף, אבל <em>שורף חלק מהמסה שלך</em> תוך כדי ריצה.</li>
+                <li><strong>ירי מסה (W / כפתור כחול):</strong> פולט כדוריות קטנות של מסה קדימה. מצוין כדי להאכיל חברים ברשת, לפתות אויבים, או כדי להקטין את עצמך במעט כדי להיות מהיר יותר.</li>
+            </ul>
+
+            <h3>🛡️ דברים שחשוב לדעת</h3>
+            <ul>
+                <li><strong>מגן התחלה:</strong> כשאתה רק נולד (או מתחיל מחדש לאחר שנפסלת), יש סביבך <em>בועה כחולה מהבהבת</em> למשך 3 שניות. בזמן הזה אתה חסין לחלוטין מכל פגיעה!</li>
+                <li><strong>וירוסים (קוצים ירוקים):</strong> אם אתה <em>קטן</em> מהם, אתה יכול להסתתר תחתיהם. אם אתה <em>גדול</em> מהם ותיגע בהם – אתה תתפוצץ, תאבד חצי מהמסה שלך ותפזר אוכל לכל עבר!</li>
+            </ul>
+
+            <h3>🌐 משחק עם חברים (רשת)</h3>
+            <ul>
+                <li><strong>יצירת חדר:</strong> אחד השחקנים לוחץ על "צור חדר". המערכת תיתן לו קוד קצר.</li>
+                <li><strong>הצטרפות:</strong> שאר החברים לוחצים על "הצטרף לחדר", מזינים את הקוד שקיבלו, ויכולים לשחק יחד באותה מפה!</li>
+            </ul>
+
+            <button class="close-btn" onclick="hideInstructions()">הבנתי, בוא נשחק!</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // מערכת סאונד (Web Audio API)
+        // ==========================================
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playTone(freq, type, duration, vol) {
+            if (!audioCtx) return;
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function soundEatFood() { playTone(800 + Math.random()*400, 'sine', 0.1, 0.03); }
+        function soundEatPlayer() { playTone(300, 'square', 0.3, 0.05); setTimeout(() => playTone(200, 'sawtooth', 0.4, 0.05), 50); }
+        function soundPop() { playTone(150, 'sawtooth', 0.5, 0.1); playTone(100, 'square', 0.5, 0.1); }
+        function soundShoot() { playTone(600, 'triangle', 0.1, 0.05); } // צליל ירי מסה
+        function soundDie() {
+            if (!audioCtx) return;
+            let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+            osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 1);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 1);
+        }
+
+        // ==========================================
+        // הגדרות והתאמות בסיסיות
+        // ==========================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let GAME_MODE = 'menu';
+        const MAP_SIZE = 3000;
+        const INITIAL_RADIUS = 20;
+        const FOOD_COUNT = 500;
+        const BOT_COUNT = 15;
+        const VIRUS_COUNT = 20;
+        
+        let player = null;
+        let foods = [];
+        let bots = [];
+        let viruses = [];
+        let networkPlayers = {}; 
+        
+        let particles = [];
+        let floatingTexts = [];
+        let currentZoom = 1;
+        let personalBest = localStorage.getItem('agarioBestScore') || 0;
+        
+        let mouseX = 0; let mouseY = 0;
+        let isBoosting = false;
+        let isShooting = false;
+        let canShoot = true; // מגביל את קצב הירי
+        
+        let cameraX = MAP_SIZE / 2; let cameraY = MAP_SIZE / 2;
+        let gameLoopId;
+
+        let peer = null; let connections = []; let hostConnection = null; let isHost = false; let roomCode = ""; let syncInterval = null;
+
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resizeCanvas); resizeCanvas();
+
+        window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
+        window.addEventListener('touchmove', (e) => { if(e.touches.length > 0) { mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY; }});
+
+        // בקרת מקלדת לספרינט וירי
+        window.addEventListener('keydown', (e) => { 
+            if(e.code === 'Space') isBoosting = true; 
+            if(e.code === 'KeyW') isShooting = true; 
+        });
+        window.addEventListener('keyup', (e) => { 
+            if(e.code === 'Space') isBoosting = false; 
+            if(e.code === 'KeyW') isShooting = false;
+        });
+        
+        // בקרת כפתורים
+        const boostBtn = document.getElementById('boost-btn');
+        boostBtn.addEventListener('touchstart', (e) => { e.preventDefault(); isBoosting = true; });
+        boostBtn.addEventListener('touchend', (e) => { e.preventDefault(); isBoosting = false; });
+        boostBtn.addEventListener('mousedown', () => { isBoosting = true; });
+        boostBtn.addEventListener('mouseup', () => { isBoosting = false; });
+
+        const shootBtn = document.getElementById('shoot-btn');
+        shootBtn.addEventListener('touchstart', (e) => { e.preventDefault(); isShooting = true; });
+        shootBtn.addEventListener('touchend', (e) => { e.preventDefault(); isShooting = false; });
+        shootBtn.addEventListener('mousedown', () => { isShooting = true; });
+        shootBtn.addEventListener('mouseup', () => { isShooting = false; });
+
+        // ==========================================
+        // אובייקטי משחק
+        // ==========================================
+
+        class Virus {
+            constructor(x, y) {
+                this.x = x; this.y = y; this.radius = 60; this.color = '#2ecc71';
+                this.rotation = Math.random() * Math.PI;
+            }
+            draw(ctx) {
+                this.rotation += 0.005; ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rotation);
+                ctx.shadowColor = 'rgba(46, 204, 113, 0.8)'; ctx.shadowBlur = 15;
+                ctx.beginPath();
+                let spikes = 16, outer = this.radius, inner = this.radius - 12;
+                for(let i=0; i<spikes*2; i++) {
+                    let r = i%2==0 ? outer : inner; let angle = (i / (spikes*2)) * Math.PI * 2;
+                    if(i==0) ctx.moveTo(Math.cos(angle)*r, Math.sin(angle)*r); else ctx.lineTo(Math.cos(angle)*r, Math.sin(angle)*r);
+                }
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(39, 174, 96, 0.6)'; ctx.fill();
+                ctx.shadowBlur = 0; ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 4; ctx.stroke(); ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y; this.color = color; this.angle = Math.random() * Math.PI * 2;
+                this.speed = Math.random() * 6 + 2; this.life = 1.0; this.decay = Math.random() * 0.05 + 0.02; this.radius = Math.random() * 4 + 2;
+            }
+            update() { this.x += Math.cos(this.angle) * this.speed; this.y += Math.sin(this.angle) * this.speed; this.life -= this.decay; this.speed *= 0.9; }
+            draw(ctx) {
+                ctx.globalAlpha = Math.max(0, this.life); ctx.fillStyle = this.color;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1.0;
+            }
+        }
+
+        class FloatingText {
+            constructor(x, y, text, color) { this.x = x; this.y = y; this.text = text; this.color = color; this.life = 1.0; }
+            update() { this.y -= 1.5; this.life -= 0.02; }
+            draw(ctx) {
+                ctx.globalAlpha = Math.max(0, this.life); ctx.fillStyle = this.color; ctx.strokeStyle = "white"; ctx.lineWidth = 3;
+                ctx.font = "bold 22px Arial"; ctx.textAlign = "center"; ctx.strokeText(this.text, this.x, this.y); ctx.fillText(this.text, this.x, this.y); ctx.globalAlpha = 1.0;
+            }
+        }
+
+        function createExplosion(x, y, color, count) { for(let i=0; i<count; i++) particles.push(new Particle(x, y, color)); }
+
+        class BlobEntity {
+            constructor(x, y, radius, color, name = "", id = "") {
+                this.x = x; this.y = y; this.radius = radius; this.color = color; this.name = name; this.id = id;
+                this.targetX = x; this.targetY = y; this.pulseAngle = Math.random() * Math.PI * 2; this.isDead = false;
+                this.invulnerableTimer = 180; // מגן חסינות של 180 פריימים (כ-3 שניות) לכל שחקן חדש
+            }
+
+            draw(ctx) {
+                this.pulseAngle += 0.06;
+                const visualRadius = Math.max(10, this.radius + Math.sin(this.pulseAngle) * (this.radius * 0.03));
+
+                ctx.save();
+                ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 15; ctx.shadowOffsetX = 3; ctx.shadowOffsetY = 3;
+
+                ctx.beginPath(); ctx.arc(this.x, this.y, visualRadius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color; ctx.fill();
+                
+                ctx.shadowColor = 'transparent'; ctx.strokeStyle = darkenColor(this.color, 40); ctx.lineWidth = 4; ctx.stroke();
+
+                // ציור מגן חסינות אם פעיל
+                if (this.invulnerableTimer > 0) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, visualRadius + 15, 0, Math.PI * 2);
+                    // הבהוב של המגן
+                    ctx.strokeStyle = `rgba(52, 152, 219, ${0.4 + Math.sin(this.invulnerableTimer * 0.2) * 0.3})`;
+                    ctx.lineWidth = 5;
+                    ctx.stroke();
+                    this.invulnerableTimer--; // הפחתת הטיימר
+                }
+
+                let lookAngle = 0;
+                if (this === player) {
+                    const dx = mouseX - canvas.width / 2; const dy = mouseY - canvas.height / 2; lookAngle = Math.atan2(dy, dx);
+                } else {
+                    lookAngle = Math.atan2(this.targetY - this.y, this.targetX - this.x);
+                    if (this.targetX === this.x && this.targetY === this.y) lookAngle = 0;
+                }
+
+                if (this.radius > 12) {
+                    const eyeDist = this.radius * 0.55; const eyeAngle1 = lookAngle - 0.5; const eyeAngle2 = lookAngle + 0.5;
+                    const eyeRadius = Math.max(4, this.radius * 0.18); const pupilRadius = eyeRadius * 0.5;
+
+                    ctx.fillStyle = "white";
+                    ctx.beginPath(); ctx.arc(this.x + Math.cos(eyeAngle1)*eyeDist, this.y + Math.sin(eyeAngle1)*eyeDist, eyeRadius, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(this.x + Math.cos(eyeAngle2)*eyeDist, this.y + Math.sin(eyeAngle2)*eyeDist, eyeRadius, 0, Math.PI*2); ctx.fill();
+
+                    ctx.fillStyle = "#111";
+                    ctx.beginPath(); ctx.arc(this.x + Math.cos(eyeAngle1)*eyeDist + Math.cos(lookAngle)*(eyeRadius-pupilRadius), this.y + Math.sin(eyeAngle1)*eyeDist + Math.sin(lookAngle)*(eyeRadius-pupilRadius), pupilRadius, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(this.x + Math.cos(eyeAngle2)*eyeDist + Math.cos(lookAngle)*(eyeRadius-pupilRadius), this.y + Math.sin(eyeAngle2)*eyeDist + Math.sin(lookAngle)*(eyeRadius-pupilRadius), pupilRadius, 0, Math.PI*2); ctx.fill();
+                }
+
+                if (this.name && this.radius > 18) {
+                    ctx.fillStyle = "white"; ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.lineWidth = 3;
+                    let fontSize = Math.max(14, this.radius / 3.5); ctx.font = `bold ${fontSize}px 'Segoe UI', sans-serif`;
+                    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                    ctx.strokeText(this.name, this.x, this.y + this.radius * 0.2); ctx.fillText(this.name, this.x, this.y + this.radius * 0.2);
+                    
+                    // תוספת: תארים דינמיים לפי גודל
+                    let title = this.radius > 300 ? "👑 שליט המפה" : this.radius > 150 ? "👹 מפלצת" : this.radius > 70 ? "⚔️ צייד" : "🌱 מתחיל";
+                    let titleSize = Math.max(10, fontSize * 0.5);
+                    ctx.font = `bold ${titleSize}px 'Segoe UI', sans-serif`;
+                    ctx.fillStyle = this.radius > 300 ? "#f1c40f" : "#ecf0f1"; 
+                    ctx.strokeText(title, this.x, this.y + this.radius * 0.2 + fontSize + 2);
+                    ctx.fillText(title, this.x, this.y + this.radius * 0.2 + fontSize + 2);
+                }
+                ctx.restore();
+            }
+
+            eat(otherRadius) {
+                const myArea = Math.PI * this.radius * this.radius; const otherArea = Math.PI * otherRadius * otherRadius;
+                this.radius = Math.sqrt((myArea + otherArea) / Math.PI);
+            }
+        }
+
+        // ==========================================
+        // יצירת מפה ומנגנון Safe Spawn
+        // ==========================================
+
+        function getRandomColor() {
+            const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#ff6b81', '#7bed9f'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        // אלגוריתם למציאת נקודת התחלה רחוקה מאויבים
+        function getSafeSpawnLocation() {
+            let bestX = MAP_SIZE / 2, bestY = MAP_SIZE / 2;
+            let maxDist = 0;
+            let allEntities = [...bots, ...Object.values(networkPlayers)];
+            
+            // בודקים 20 נקודות אקראיות ולוקחים את זו שהכי רחוקה מהשחקן/בוט הקרוב ביותר
+            for(let i = 0; i < 20; i++) {
+                let tx = 100 + Math.random() * (MAP_SIZE - 200);
+                let ty = 100 + Math.random() * (MAP_SIZE - 200);
+                let closestDist = Infinity;
+                
+                allEntities.forEach(e => {
+                    let d = Math.hypot(tx - e.x, ty - e.y);
+                    if (d < closestDist) closestDist = d;
+                });
+                
+                // התחשבות גם בוירוסים כדי לא להיווצר בתוכם
+                viruses.forEach(v => {
+                    let d = Math.hypot(tx - v.x, ty - v.y);
+                    if (d < closestDist) closestDist = d;
+                });
+
+                if (closestDist > maxDist || allEntities.length === 0) {
+                    maxDist = closestDist; bestX = tx; bestY = ty;
+                }
+            }
+            return { x: bestX, y: bestY };
+        }
+
+        function spawnFoods() {
+            foods = [];
+            for (let i = 0; i < FOOD_COUNT; i++) {
+                let isGold = Math.random() < 0.02; // 2% סיכוי למזון זהב
+                foods.push({ 
+                    x: Math.random() * MAP_SIZE, 
+                    y: Math.random() * MAP_SIZE, 
+                    color: isGold ? '#f1c40f' : getRandomColor(), 
+                    radius: isGold ? 12 : 4 + Math.random() * 4, 
+                    vx: 0, 
+                    vy: 0,
+                    isGold: isGold 
+                });
+            }
+        }
+
+        function spawnViruses() {
+            viruses = []; for (let i = 0; i < VIRUS_COUNT; i++) viruses.push(new Virus(Math.random() * MAP_SIZE, Math.random() * MAP_SIZE));
+        }
+
+        function spawnBots() {
+            bots = []; for (let i = 0; i < BOT_COUNT; i++) spawnSingleBot();
+        }
+
+        function spawnSingleBot() {
+            let loc = getSafeSpawnLocation(); // גם בוטים נולדים במקום בטוח
+            bots.push(new BlobEntity(loc.x, loc.y, INITIAL_RADIUS + Math.random() * 40, getRandomColor(), "בוט " + Math.floor(Math.random() * 100)));
+        }
+
+        function showMessage(text) {
+            const msgBox = document.getElementById('message-box');
+            msgBox.innerText = text; msgBox.style.display = 'block'; setTimeout(() => { msgBox.style.display = 'none'; }, 3000);
+        }
+
+        // ==========================================
+        // בקרת משחק (כניסה ויציאה)
+        // ==========================================
+
+        function startLocalGame() {
+            initAudio(); 
+            const name = document.getElementById('playerName').value || "שחקן חדש";
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('leaderboard').style.display = 'block';
+            document.getElementById('mass-display').style.display = 'block';
+            document.getElementById('best-mass').innerText = Math.round(personalBest);
+            
+            GAME_MODE = 'bots';
+            spawnFoods(); spawnViruses(); spawnBots();
+            
+            let safeLoc = getSafeSpawnLocation();
+            player = new BlobEntity(safeLoc.x, safeLoc.y, INITIAL_RADIUS, getRandomColor(), name, "local_player");
+            
+            mouseX = canvas.width / 2; mouseY = canvas.height / 2; currentZoom = 1;
+            
+            if (gameLoopId) cancelAnimationFrame(gameLoopId); gameLoop();
+        }
+
+        function hostGame() {
+            initAudio(); const name = document.getElementById('playerName').value || "מארח";
+            roomCode = Math.floor(1000 + Math.random() * 9000).toString(); 
+            showMessage("מייצר חדר..."); peer = new Peer('agario-room-' + roomCode);
+            
+            peer.on('open', (id) => {
+                isHost = true;
+                let safeLoc = getSafeSpawnLocation();
+                player = new BlobEntity(safeLoc.x, safeLoc.y, INITIAL_RADIUS, getRandomColor(), name, id);
+                spawnFoods(); spawnViruses();
+                
+                document.getElementById('main-menu').innerHTML = `
+                    <h1>החדר מוכן</h1>
+                    <p class="subtitle">הקוד לחברים: <b style="font-size: 28px; color: #e74c3c;">${roomCode}</b></p>
+                    <p>שתף את הקוד כדי שיצטרפו אליך.</p>
+                    <button class="btn btn-primary" onclick="startMultiplayerGame()">התחל משחק!</button>
+                    <button class="btn btn-secondary" style="margin-top: 10px;" onclick="location.reload()">ביטול</button>
+                `;
+            });
+
+            peer.on('connection', (conn) => {
+                connections.push(conn); showMessage("חבר התחבר לחדר!");
+                conn.on('data', handleNetworkData);
+                let vData = viruses.map(v => ({x: v.x, y: v.y}));
+                conn.send({ type: 'init_world', foods: foods, viruses: vData });
+            });
+            peer.on('error', (err) => { showMessage("שגיאה ביצירת חדר. נסה שוב."); });
+        }
+
+        function joinGameUI() {
+            const name = document.getElementById('playerName').value;
+            document.getElementById('main-menu').innerHTML = `
+                <h1>הצטרפות לחדר</h1>
+                <input type="hidden" id="playerName" value="${name}">
+                <input type="text" id="joinCode" placeholder="הכנס קוד (4 ספרות)" maxlength="4">
+                <button class="btn btn-secondary" onclick="joinGame()">הצטרף עכשיו</button>
+                <button class="btn btn-primary" style="margin-top: 10px;" onclick="location.reload()">חזור</button>
+            `;
+        }
+
+        function joinGame() {
+            initAudio(); const name = document.getElementById('playerName').value || "חבר";
+            const code = document.getElementById('joinCode').value;
+            if(!code) return showMessage("חובה להזין קוד חדר!");
+            
+            showMessage("מתחבר לחבר..."); peer = new Peer();
+            
+            peer.on('open', (id) => {
+                isHost = false;
+                // בלקוח לא מחשבים Safe Spawn מדויק, אבל שמים אותו רנדומלי (הוא מוגן בבועה בכל מקרה)
+                player = new BlobEntity(Math.random() * MAP_SIZE, Math.random() * MAP_SIZE, INITIAL_RADIUS, getRandomColor(), name, id);
+                hostConnection = peer.connect('agario-room-' + code);
+                
+                hostConnection.on('open', () => { showMessage("מחובר! מחכה שהמארח יתחיל..."); });
+                hostConnection.on('data', handleNetworkData);
+            });
+            peer.on('error', (err) => { showMessage("הקוד לא נמצא."); });
+        }
+
+        function startMultiplayerGame() {
+            if(!isHost) return; startGameUI(); connections.forEach(c => c.send({ type: 'start_game' }));
+            if (gameLoopId) cancelAnimationFrame(gameLoopId); gameLoop();
+            syncInterval = setInterval(broadcastGameState, 50);
+        }
+
+        function startGameUI() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('leaderboard').style.display = 'block';
+            document.getElementById('mass-display').style.display = 'block';
+            document.getElementById('best-mass').innerText = Math.round(personalBest);
+            GAME_MODE = 'online'; currentZoom = 1;
+        }
+
+        function handleNetworkData(data) {
+            if(data.type === 'init_world') { foods = data.foods; viruses = data.viruses.map(v => new Virus(v.x, v.y)); }
+            else if(data.type === 'start_game') {
+                startGameUI(); if (gameLoopId) cancelAnimationFrame(gameLoopId); gameLoop();
+                syncInterval = setInterval(sendPlayerState, 50);
+            }
+            else if(data.type === 'player_state') {
+                const id = data.player.id;
+                if(!networkPlayers[id]) {
+                    networkPlayers[id] = new BlobEntity(data.player.x, data.player.y, data.player.radius, data.player.color, data.player.name, id);
+                    networkPlayers[id].invulnerableTimer = data.player.invulnerableTimer; // סנכרון המגן
+                }
+                else { 
+                    networkPlayers[id].targetX = data.player.x; networkPlayers[id].targetY = data.player.y; 
+                    networkPlayers[id].radius = data.player.radius; networkPlayers[id].invulnerableTimer = data.player.invulnerableTimer;
+                }
+            }
+            else if(data.type === 'host_broadcast') {
+                data.players.forEach(p => {
+                    if(p.id !== player.id) {
+                        if(!networkPlayers[p.id]) {
+                            networkPlayers[p.id] = new BlobEntity(p.x, p.y, p.radius, p.color, p.name, p.id);
+                            networkPlayers[p.id].invulnerableTimer = p.invulnerableTimer;
+                        }
+                        else { 
+                            networkPlayers[p.id].targetX = p.x; networkPlayers[p.id].targetY = p.y; 
+                            networkPlayers[p.id].radius = p.radius; networkPlayers[p.id].invulnerableTimer = p.invulnerableTimer;
+                        }
+                    }
+                });
+            }
+            else if(data.type === 'food_eaten') { let f = foods.splice(data.index, 1)[0]; if(f) createExplosion(f.x, f.y, f.color, 4); }
+            else if(data.type === 'add_food') foods.push(data.food);
+            else if(data.type === 'virus_popped') {
+                let v = viruses.splice(data.index, 1)[0]; if(v) createExplosion(v.x, v.y, '#2ecc71', 20);
+                viruses.push(new Virus(data.newV.x, data.newV.y));
+            }
+        }
+
+        function broadcastGameState() {
+            if(!isHost || !player) return;
+            let pData = { id: player.id, x: player.x, y: player.y, radius: player.radius, color: player.color, name: player.name, invulnerableTimer: player.invulnerableTimer };
+            connections.forEach(c => c.send({ type: 'player_state', player: pData }));
+            
+            let allPlayers = [pData];
+            Object.values(networkPlayers).forEach(np => {
+                allPlayers.push({ id: np.id, x: np.targetX, y: np.targetY, radius: np.radius, color: np.color, name: np.name, invulnerableTimer: np.invulnerableTimer });
+            });
+            connections.forEach(c => c.send({ type: 'host_broadcast', players: allPlayers }));
+        }
+
+        function sendPlayerState() {
+            if(isHost || !player || !hostConnection) return;
+            let pData = { id: player.id, x: player.x, y: player.y, radius: player.radius, color: player.color, name: player.name, invulnerableTimer: player.invulnerableTimer };
+            hostConnection.send({ type: 'player_state', player: pData });
+        }
+
+        // ==========================================
+        // לולאת משחק מעודכנת
+        // ==========================================
+
+        function gameLoop() {
+            if (!player) return;
+            updateLogic(); drawGame(); updateUI();
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function updateUI() {
+            let list = GAME_MODE === 'bots' ? [player, ...bots] : [player, ...Object.values(networkPlayers)];
+            list.sort((a, b) => b.radius - a.radius);
+            
+            const ol = document.getElementById('lb-list'); ol.innerHTML = '';
+            for (let i = 0; i < Math.min(5, list.length); i++) {
+                const li = document.createElement('li'); li.innerText = `${list[i].name} (${Math.round(list[i].radius)})`;
+                if (list[i] === player) li.style.color = '#f1c40f'; ol.appendChild(li);
+            }
+
+            let currentMass = Math.round(player.radius);
+            document.getElementById('current-mass').innerText = currentMass;
+            
+            // עדכון שיא אישי
+            if (currentMass > personalBest) {
+                personalBest = currentMass;
+                localStorage.setItem('agarioBestScore', personalBest);
+                document.getElementById('best-mass').innerText = personalBest;
+                document.getElementById('best-mass').style.color = '#2ecc71'; // ירוק על שבירת שיא
+            }
+        }
+
+        function updateLogic() {
+            let targetZoom = 15 / Math.sqrt(player.radius * 10);
+            targetZoom = Math.max(0.25, Math.min(1.2, targetZoom));
+            currentZoom += (targetZoom - currentZoom) * 0.05;
+
+            const dx = mouseX - canvas.width / 2; const dy = mouseY - canvas.height / 2; const distance = Math.hypot(dx, dy);
+            let speed = Math.max(1.5, 50 / Math.pow(player.radius, 0.4));
+            
+            if (isBoosting && player.radius > 25) {
+                speed *= 1.8; player.radius -= 0.15; 
+                if (Math.random() < 0.4) particles.push(new Particle(player.x - (dx/distance)*player.radius, player.y - (dy/distance)*player.radius, player.color));
+            }
+
+            // מכניקת ירי מסה (W)
+            if (isShooting && player.radius > 30 && canShoot) {
+                canShoot = false;
+                setTimeout(() => canShoot = true, 150); // קצב ירי הגיוני
+                
+                player.radius -= 1.5; // איבוד מסה בירי
+                soundShoot();
+                
+                // חישוב זווית הירי (לכיוון העכבר)
+                let angle = Math.atan2(dy, dx);
+                let distFromCenter = player.radius + 10;
+                let fx = player.x + Math.cos(angle) * distFromCenter;
+                let fy = player.y + Math.sin(angle) * distFromCenter;
+                
+                // הוספת מזון נע (Ejected Mass)
+                let newFood = { x: fx, y: fy, color: player.color, radius: 7, vx: Math.cos(angle) * 15, vy: Math.sin(angle) * 15 };
+                foods.push(newFood);
+                
+                if(GAME_MODE === 'online') {
+                    if (isHost) connections.forEach(c => c.send({ type: 'add_food', food: newFood }));
+                    else hostConnection.send({ type: 'add_food', food: newFood }); // בדוגמה זו לא נסנכרן את התנועה המדויקת של הפליטה כדי לא להעמיס
+                }
+            }
+            
+            if (distance > 10) { player.x += (dx / distance) * speed; player.y += (dy / distance) * speed; }
+
+            player.x = Math.max(player.radius, Math.min(MAP_SIZE - player.radius, player.x));
+            player.y = Math.max(player.radius, Math.min(MAP_SIZE - player.radius, player.y));
+
+            cameraX += (player.x - cameraX) * 0.1; cameraY += (player.y - cameraY) * 0.1;
+
+            // עדכון מזון נע (חיכוך)
+            foods.forEach(f => {
+                if(f.vx !== undefined && f.vy !== undefined) {
+                    f.x += f.vx; f.y += f.vy;
+                    f.vx *= 0.92; f.vy *= 0.92; // האטה הדרגתית
+                    // חסימה גבולות
+                    f.x = Math.max(0, Math.min(MAP_SIZE, f.x)); f.y = Math.max(0, Math.min(MAP_SIZE, f.y));
+                }
+            });
+
+            if (GAME_MODE === 'bots') bots.forEach(bot => updateBotLogic(bot));
+            if (GAME_MODE === 'online') Object.values(networkPlayers).forEach(p => { p.x += (p.targetX - p.x) * 0.1; p.y += (p.targetY - p.y) * 0.1; });
+
+            for(let i = particles.length-1; i>=0; i--) { particles[i].update(); if(particles[i].life <= 0) particles.splice(i, 1); }
+            for(let i = floatingTexts.length-1; i>=0; i--) { floatingTexts[i].update(); if(floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); }
+
+            checkCollisions();
+        }
+
+        function updateBotLogic(bot) {
+            let speed = Math.max(1.5, 50 / Math.pow(bot.radius, 0.4));
+            let allEntities = [player, ...bots].filter(e => e !== bot && e !== null);
+            let nearestThreat = null, minDistThreat = Infinity; let nearestPrey = null, minDistPrey = Infinity;
+
+            allEntities.forEach(e => {
+                // לא מתייחסים לאויבים שהם עם מגן חסינות במרדפים
+                if(e.invulnerableTimer > 0) return; 
+
+                let d = Math.hypot(bot.x - e.x, bot.y - e.y);
+                if (e.radius > bot.radius * 1.1 && d < minDistThreat) { minDistThreat = d; nearestThreat = e; }
+                else if (bot.radius > e.radius * 1.1 && d < minDistPrey) { minDistPrey = d; nearestPrey = e; }
+            });
+
+            let nearVirus = viruses.find(v => Math.hypot(bot.x - v.x, bot.y - v.y) < 150 && bot.radius > v.radius);
+            let nearestFood = bot.memoryFood;
+            if (Math.random() < 0.2) {
+                let minDistFood = Infinity;
+                foods.forEach(f => { let d = Math.hypot(bot.x - f.x, bot.y - f.y); if (d < minDistFood) { minDistFood = d; nearestFood = f; }});
+                bot.memoryFood = nearestFood;
+            }
+
+            let targetDx = 0, targetDy = 0;
+            if (nearVirus) { targetDx = bot.x - nearVirus.x; targetDy = bot.y - nearVirus.y; }
+            else if (nearestThreat && minDistThreat < 400) { targetDx = bot.x - nearestThreat.x; targetDy = bot.y - nearestThreat.y; if (bot.radius > 30 && minDistThreat < 250) { speed *= 1.5; bot.radius -= 0.1; } } 
+            else if (nearestPrey && minDistPrey < 600) { targetDx = nearestPrey.x - bot.x; targetDy = nearestPrey.y - bot.y; }
+            else if (nearestFood) { targetDx = nearestFood.x - bot.x; targetDy = nearestFood.y - bot.y; } 
+            else { targetDx = (MAP_SIZE/2) - bot.x; targetDy = (MAP_SIZE/2) - bot.y; }
+
+            let dist = Math.hypot(targetDx, targetDy); if (dist > 0) { bot.x += (targetDx / dist) * speed; bot.y += (targetDy / dist) * speed; }
+            bot.x = Math.max(bot.radius, Math.min(MAP_SIZE - bot.radius, bot.x)); bot.y = Math.max(bot.radius, Math.min(MAP_SIZE - bot.radius, bot.y));
+            bot.targetX = bot.x + targetDx; bot.targetY = bot.y + targetDy;
+        }
+
+        function popEntity(entity) {
+            entity.radius *= 0.5; if(entity === player) soundPop();
+            let foodsToSpawn = Math.min(20, Math.floor(entity.radius / 2));
+            for(let k=0; k<foodsToSpawn; k++) {
+                let r = Math.random() * 200 + 50; let ang = Math.random() * Math.PI * 2;
+                let fX = Math.max(0, Math.min(MAP_SIZE, entity.x + Math.cos(ang)*r)); let fY = Math.max(0, Math.min(MAP_SIZE, entity.y + Math.sin(ang)*r));
+                let newFood = { x: fX, y: fY, color: entity.color, radius: 8, vx: 0, vy: 0 };
+                foods.push(newFood);
+                if(GAME_MODE === 'online' && isHost) connections.forEach(c => c.send({ type: 'add_food', food: newFood }));
+            }
+        }
+
+        function checkCollisions() {
+            let entities = GAME_MODE === 'bots' ? [player, ...bots] : [player, ...Object.values(networkPlayers)];
+
+            viruses.forEach((v, vIndex) => {
+                entities.forEach(e => {
+                    if(!e || e.isDead) return;
+                    let dist = Math.hypot(e.x - v.x, e.y - v.y);
+                    // הוירוס מפוצץ אם אתה גדול, ומאפשר להתחבא אם אתה קטן (ללא מגן!)
+                    if (dist < e.radius && e.radius > v.radius * 1.3 && e.invulnerableTimer <= 0) {
+                        popEntity(e); createExplosion(v.x, v.y, '#2ecc71', 30);
+                        let newV = {x: Math.random()*MAP_SIZE, y: Math.random()*MAP_SIZE};
+                        viruses.splice(vIndex, 1); viruses.push(new Virus(newV.x, newV.y));
+                        if(GAME_MODE === 'online' && isHost) connections.forEach(c => c.send({ type: 'virus_popped', index: vIndex, newV: newV }));
+                    }
+                });
+            });
+
+            if (player) {
+                for (let i = foods.length - 1; i >= 0; i--) {
+                    let f = foods[i];
+                    if (Math.hypot(player.x - f.x, player.y - f.y) < player.radius) {
+                        player.eat(f.radius); soundEatFood(); createExplosion(f.x, f.y, f.color, 5); 
+                        if(f.isGold) { floatingTexts.push(new FloatingText(f.x, f.y, "⭐ זכייה!", f.color)); }
+                        else if(f.radius > 5) floatingTexts.push(new FloatingText(f.x, f.y, "+1", f.color)); 
+                        
+                        foods.splice(i, 1);
+                        if (GAME_MODE === 'online') {
+                            if (isHost) { 
+                                connections.forEach(c => c.send({ type: 'food_eaten', index: i })); 
+                                let isGold = Math.random() < 0.02;
+                                let newFood = { x: Math.random() * MAP_SIZE, y: Math.random() * MAP_SIZE, color: isGold ? '#f1c40f' : getRandomColor(), radius: isGold ? 12 : 4 + Math.random() * 3, vx: 0, vy: 0, isGold: isGold }; 
+                                foods.push(newFood); 
+                                connections.forEach(c => c.send({ type: 'add_food', food: newFood })); 
+                            } 
+                            else hostConnection.send({ type: 'food_eaten', index: i });
+                        } else {
+                            let isGold = Math.random() < 0.02;
+                            foods.push({ x: Math.random() * MAP_SIZE, y: Math.random() * MAP_SIZE, color: isGold ? '#f1c40f' : getRandomColor(), radius: isGold ? 12 : 4 + Math.random() * 3, vx: 0, vy: 0, isGold: isGold });
+                        }
+                    }
+                }
+            }
+
+            if (GAME_MODE === 'bots') {
+                for(let b of bots) {
+                    for (let i = foods.length - 1; i >= 0; i--) {
+                        if (Math.hypot(b.x - foods[i].x, b.y - foods[i].y) < b.radius) { 
+                            b.eat(foods[i].radius); foods.splice(i, 1); 
+                            let isGold = Math.random() < 0.02;
+                            foods.push({ x: Math.random() * MAP_SIZE, y: Math.random() * MAP_SIZE, color: isGold ? '#f1c40f' : getRandomColor(), radius: isGold ? 12 : 4 + Math.random() * 3, vx: 0, vy: 0, isGold: isGold }); 
+                        }
+                    }
+                }
+            }
+
+            for (let i = 0; i < entities.length; i++) {
+                for (let j = 0; j < entities.length; j++) {
+                    if (i === j) continue;
+                    let a = entities[i]; let b = entities[j];
+                    if (a.isDead || b.isDead) continue;
+                    
+                    // אי אפשר לאכול או להיאכל כשמגן החסינות פועל!
+                    if (a.invulnerableTimer > 0 || b.invulnerableTimer > 0) continue;
+                    
+                    let dist = Math.hypot(a.x - b.x, a.y - b.y);
+                    if (dist < a.radius && a.radius > b.radius * 1.05) {
+                        b.isDead = true; 
+                        if (b === player) { soundDie(); gameOver(); return; } 
+                        else {
+                            let gained = Math.round(b.radius); a.eat(b.radius); 
+                            if(a === player) { soundEatPlayer(); } 
+                            createExplosion(b.x, b.y, b.color, 20);
+                            if (a === player) floatingTexts.push(new FloatingText(b.x, b.y, "+" + gained, b.color));
+                            if (GAME_MODE === 'bots') {
+                                let idx = bots.indexOf(b);
+                                if (idx > -1) { bots.splice(idx, 1); setTimeout(spawnSingleBot, 3000); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function drawGame() {
+            ctx.fillStyle = "#e8f4f8"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.save(); ctx.translate(canvas.width / 2, canvas.height / 2); ctx.scale(currentZoom, currentZoom); 
+            ctx.translate(-cameraX, -cameraY);
+
+            ctx.strokeStyle = "rgba(0,0,0,0.04)"; ctx.lineWidth = 3; const gridSize = 60;
+            const left = cameraX - (canvas.width / 2) / currentZoom; const right = cameraX + (canvas.width / 2) / currentZoom;
+            const top = cameraY - (canvas.height / 2) / currentZoom; const bottom = cameraY + (canvas.height / 2) / currentZoom;
+            const startX = Math.max(0, Math.floor(left / gridSize) * gridSize); const endX = Math.min(MAP_SIZE, right);
+            const startY = Math.max(0, Math.floor(top / gridSize) * gridSize); const endY = Math.min(MAP_SIZE, bottom);
+
+            ctx.beginPath();
+            for (let x = startX; x <= endX; x += gridSize) { ctx.moveTo(x, Math.max(0, top)); ctx.lineTo(x, Math.min(MAP_SIZE, bottom)); }
+            for (let y = startY; y <= endY; y += gridSize) { ctx.moveTo(Math.max(0, left), y); ctx.lineTo(Math.min(MAP_SIZE, right), y); }
+            ctx.stroke();
+
+            ctx.strokeStyle = "rgba(231, 76, 60, 0.6)"; ctx.lineWidth = 15; ctx.shadowColor = 'rgba(231, 76, 60, 0.8)'; ctx.shadowBlur = 20; ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE); ctx.shadowBlur = 0;
+
+            foods.forEach(f => { 
+                ctx.beginPath(); 
+                if (f.isGold) {
+                    ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 15;
+                    ctx.arc(f.x, f.y, f.radius + Math.sin(Date.now() / 150) * 2, 0, Math.PI * 2); // אפקט פעימה מיוחד
+                } else {
+                    ctx.shadowBlur = 0;
+                    ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2); 
+                }
+                ctx.fillStyle = f.color; ctx.fill(); 
+            });
+            ctx.shadowBlur = 0; // איפוס צללים
+
+            viruses.forEach(v => v.draw(ctx)); particles.forEach(p => p.draw(ctx));
+
+            let drawables = [];
+            if (player && !player.isDead) drawables.push(player);
+            if (GAME_MODE === 'bots') drawables.push(...bots);
+            if (GAME_MODE === 'online') drawables.push(...Object.values(networkPlayers));
+            
+            drawables.sort((a, b) => a.radius - b.radius); drawables.forEach(d => {if(!d.isDead) d.draw(ctx)});
+            floatingTexts.forEach(ft => ft.draw(ctx)); ctx.restore(); drawMinimap();
+        }
+
+        function drawMinimap() {
+            const mmSize = 150; const padding = 20; const mmX = canvas.width - mmSize - padding; const mmY = canvas.height - mmSize - padding;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'; ctx.fillRect(mmX, mmY, mmSize, mmSize); ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; ctx.lineWidth = 2; ctx.strokeRect(mmX, mmY, mmSize, mmSize);
+            if (player) {
+                let px = (player.x / MAP_SIZE) * mmSize; let py = (player.y / MAP_SIZE) * mmSize;
+                ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(mmX + px, mmY + py, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; ctx.beginPath(); ctx.arc(mmX + px, mmY + py, 15, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+
+        function gameOver() {
+            cancelAnimationFrame(gameLoopId); gameLoopId = null; document.getElementById('death-screen').style.display = 'block';
+            if(player) document.getElementById('final-score').innerText = Math.round(player.radius);
+            if (syncInterval) clearInterval(syncInterval);
+            player = null;
+        }
+
+        function darkenColor(color, percent) {
+            let num = parseInt(color.replace("#",""),16), amt = Math.round(2.55 * percent), R = (num >> 16) - amt, B = (num >> 8 & 0x00FF) - amt, G = (num & 0x0000FF) - amt;
+            return "#" + (0x1000000 + (R<255?R<1?0:R:255)*0x10000 + (B<255?B<1?0:B:255)*0x100 + (G<255?G<1?0:G:255)).toString(16).slice(1);
+        }
+
+        window.startLocalGame = startLocalGame; window.hostGame = hostGame; window.joinGameUI = joinGameUI; window.joinGame = joinGame; window.startMultiplayerGame = startMultiplayerGame;
+        
+        // פונקציות חלונית הוראות
+        window.showInstructions = () => { document.getElementById('instructions-modal').style.display = 'block'; };
+        window.hideInstructions = () => { document.getElementById('instructions-modal').style.display = 'none'; };
+
+        window.resetGame = () => {
+            document.getElementById('death-screen').style.display = 'none'; document.getElementById('main-menu').style.display = 'block';
+            document.getElementById('leaderboard').style.display = 'none'; document.getElementById('mass-display').style.display = 'none';
+            GAME_MODE = 'menu'; if (syncInterval) clearInterval(syncInterval); if (peer) peer.destroy();
+            peer = null; connections = []; hostConnection = null; networkPlayers = {}; ctx.clearRect(0, 0, canvas.width, canvas.height); location.reload(); 
+        };
+    </script>
+</body>
+</html>

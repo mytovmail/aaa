@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מלקטי החלל - איסוף תחרותי</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
+
+        body {
+            margin: 0;
+            background-color: #0f171e;
+            font-family: 'Heebo', sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .nav-buttons { position: absolute; top: 15px; right: 20px; display: flex; gap: 10px; z-index: 200; }
+        .nav-btn { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 15px; border-radius: 20px; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: bold; transition: all 0.2s; font-family: inherit;}
+        .nav-btn:hover { background: rgba(255, 255, 255, 0.3); transform: scale(1.05); }
+
+        #top-hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+            padding: 10px 20px;
+            margin-bottom: 15px;
+            z-index: 10;
+        }
+
+        .score-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 25px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid rgba(255,255,255,0.1);
+            min-width: 140px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
+        }
+
+        .p1-box { border-bottom: 4px solid #00d2ff; }
+        .p2-box { border-bottom: 4px solid #ff3366; }
+
+        .player-name { font-size: 16px; color: #aaa; }
+        .score-num { font-size: 38px; font-weight: 900; line-height: 1; margin-top: 5px; }
+        .p1-text { color: #00d2ff; text-shadow: 0 0 10px rgba(0,210,255,0.5); }
+        .p2-text { color: #ff3366; text-shadow: 0 0 10px rgba(255,51,102,0.5); }
+
+        #timer-box {
+            font-size: 42px;
+            font-weight: 900;
+            color: #f1c40f;
+            text-shadow: 0 0 15px rgba(241,196,15,0.6);
+            background: rgba(0,0,0,0.5);
+            padding: 5px 20px;
+            border-radius: 10px;
+            border: 1px solid #f1c40f;
+        }
+
+        .hurry-up { color: #e74c3c !important; text-shadow: 0 0 20px rgba(231,76,60,0.8) !important; animation: pulse 0.5s infinite alternate; border-color: #e74c3c !important;}
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
+
+        #game-container {
+            position: relative;
+            background: linear-gradient(to bottom, #1a1a2e 0%, #16213e 100%);
+            border-radius: 15px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+            border: 4px solid #222;
+            overflow: hidden;
+            width: 800px;
+            height: 500px;
+        }
+
+        canvas { display: block; }
+
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 15, 20, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px 40px;
+            text-align: center;
+            max-width: 650px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+            text-align: right;
+            direction: rtl;
+        }
+
+        .control-box {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+
+        .kbd {
+            display: inline-block;
+            background: #222;
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            border-bottom: 3px solid #000;
+            border-top: 1px solid #555;
+            margin: 0 5px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #f1c40f, #e67e22);
+            color: #000;
+            font-size: 22px;
+            font-weight: 900;
+            padding: 10px 40px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-family: inherit;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 5px 15px rgba(241, 196, 15, 0.4);
+        }
+        .btn:hover { transform: scale(1.05) translateY(-2px); box-shadow: 0 8px 20px rgba(241, 196, 15, 0.6); }
+        .hidden { display: none !important; }
+
+        .items-legend {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 8px; font-weight: bold; justify-content: center;}
+        .dot { width: 15px; height: 15px; border-radius: 50%; display: inline-block; }
+        .diamond-shape { transform: rotate(45deg); border-radius: 2px !important;}
+        
+    </style>
+</head>
+<body>
+
+    <div class="nav-buttons">
+        <button onclick="toggleSound()" class="nav-btn" id="sound-btn">🔊 קול פועל</button>
+        <a href="index.html" class="nav-btn">🏠 דף הבית</a>
+    </div>
+
+    <div id="top-hud">
+        <div class="score-box p1-box" id="p1-score-box">
+            <div class="player-name">שחקן 1 (כחול)</div>
+            <div class="score-num p1-text" id="score1">0</div>
+        </div>
+        
+        <div id="timer-box">60</div>
+        
+        <div class="score-box p2-box" id="p2-score-box">
+            <div class="player-name">שחקן 2 (אדום)</div>
+            <div class="score-num p2-text" id="score2">0</div>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+        <div id="start-screen" class="overlay">
+            <div class="glass-panel">
+                <h1 style="color: #fff; margin-top:0; font-size:38px; margin-bottom: 5px;">מלקטי החלל 🚀</h1>
+                <p style="font-size: 16px; margin-bottom: 10px;">תפסו אוצרות, דחפו את היריב, והשתמשו בכוחות מיוחדים!</p>
+                
+                <div class="items-legend">
+                    <div class="legend-item"><span class="dot diamond-shape" style="background: #00ff88; box-shadow: 0 0 10px #00ff88;"></span> יהלום (+10)</div>
+                    <div class="legend-item"><span class="dot" style="background: #f1c40f; box-shadow: 0 0 10px #f1c40f; border-radius:2px;"></span> כוכב (+30)</div>
+                    <div class="legend-item"><span class="dot" style="background: #e74c3c; box-shadow: 0 0 10px #e74c3c;"></span> פצצה (הלם ו-20)</div>
+                    <div class="legend-item" style="grid-column: 1 / 3;"><span class="dot diamond-shape" style="background: #00ffff; box-shadow: 0 0 10px #00ffff;"></span> <b>קיפאון:</b> מקפיא את היריב!</div>
+                    <div class="legend-item" style="grid-column: 2 / 4;"><span class="dot" style="background: #9b59b6; box-shadow: 0 0 10px #9b59b6;"></span> <b>מגן כוח:</b> הדיפת פצצות ודחיפת על!</div>
+                </div>
+                
+                <div class="controls-grid">
+                    <div class="control-box" style="border-bottom: 3px solid #00d2ff;">
+                        <h3 style="color: #00d2ff; margin-top:0;">שחקן 1</h3>
+                        <p>תנועה: <span class="kbd">A</span> <span class="kbd">D</span></p>
+                    </div>
+                    <div class="control-box" style="border-bottom: 3px solid #ff3366;">
+                        <h3 style="color: #ff3366; margin-top:0;">שחקן 2</h3>
+                        <p>תנועה: <span class="kbd">←</span> <span class="kbd">→</span></p>
+                    </div>
+                </div>
+
+                <button class="btn" onclick="startGame()">התחל מרוץ (60 שנ')</button>
+            </div>
+        </div>
+
+        <div id="game-over-screen" class="overlay hidden">
+            <div class="glass-panel">
+                <h1 id="winner-text" style="color: #f1c40f; font-size: 54px; margin-top:0;">הזמן נגמר!</h1>
+                <h2 id="final-score-text" style="color: white;"></h2>
+                <button class="btn" onclick="resetGame()">שחק שוב</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let audioCtx;
+        let soundEnabled = true;
+
+        const keys = {};
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        // מחלקת שחקן
+        class Player {
+            constructor(x, color, leftKey, rightKey, isP1) {
+                this.x = x;
+                this.y = canvas.height - 40;
+                this.width = 50;
+                this.height = 20;
+                this.color = color;
+                this.leftKey = leftKey;
+                this.rightKey = rightKey;
+                this.isP1 = isP1;
+                
+                this.vx = 0;
+                this.speed = 1.2; 
+                this.friction = 0.85; 
+                this.maxSpeed = 12;
+                
+                this.score = 0;
+                this.stunTimer = 0;
+                this.shieldTimer = 0; // הילה של מגן כוח
+            }
+
+            update() {
+                if (this.shieldTimer > 0) this.shieldTimer--;
+
+                if (this.stunTimer > 0) {
+                    this.stunTimer--;
+                    this.vx *= 0.9; // מאט מאוד בזמן הלם/קיפאון
+                } else {
+                    if (keys[this.leftKey]) this.vx -= this.speed;
+                    if (keys[this.rightKey]) this.vx += this.speed;
+                }
+
+                if (this.vx > this.maxSpeed) this.vx = this.maxSpeed;
+                if (this.vx < -this.maxSpeed) this.vx = -this.maxSpeed;
+
+                this.vx *= this.friction;
+                this.x += this.vx;
+
+                if (this.x < 0) { this.x = 0; this.vx = 0; }
+                if (this.x + this.width > canvas.width) { this.x = canvas.width - this.width; this.vx = 0; }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                // ציור מגן כוח (הילה סגולה)
+                if (this.shieldTimer > 0) {
+                    ctx.beginPath();
+                    ctx.arc(this.width/2, 10, this.width/2 + 10, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(155, 89, 182, 0.3)';
+                    ctx.fill();
+                    ctx.strokeStyle = '#9b59b6';
+                    ctx.lineWidth = 3;
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#9b59b6';
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+
+                if (this.stunTimer > 0) {
+                    ctx.globalAlpha = 0.5;
+                    // אפקט רעידה וצבע תכלת אם זה קיפאון
+                    ctx.translate((Math.random()-0.5)*4, 0); 
+                }
+
+                // גוף הרובוט
+                ctx.fillStyle = this.stunTimer > 0 ? '#555' : this.color;
+                if (this.stunTimer > 0 && this.isFrozen) ctx.fillStyle = '#00ffff'; // צבע קיפאון
+                
+                ctx.shadowBlur = this.stunTimer > 0 ? 0 : 15;
+                ctx.shadowColor = this.color;
+                
+                ctx.beginPath();
+                ctx.roundRect(0, 5, this.width, 15, 5);
+                ctx.fill();
+                
+                // תא טייס
+                ctx.beginPath();
+                ctx.ellipse(this.width/2, 5, 15, 10, 0, 0, Math.PI, true);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        // מחלקת חפצים נופלים
+        class Item {
+            constructor() {
+                this.x = Math.random() * (canvas.width - 30) + 15;
+                this.y = -30;
+                this.radius = 12;
+                
+                let rand = Math.random();
+                if (rand < 0.05) {
+                    this.type = 'freeze'; // קיפאון ליריב
+                    this.color = '#00ffff';
+                    this.vy = Math.random() * 2 + 3; 
+                    this.points = 0;
+                } else if (rand < 0.10) {
+                    this.type = 'shield'; // מגן כוח
+                    this.color = '#9b59b6';
+                    this.vy = Math.random() * 2 + 3; 
+                    this.points = 0;
+                } else if (rand < 0.20) {
+                    this.type = 'star'; 
+                    this.color = '#f1c40f';
+                    this.vy = Math.random() * 2 + 4;
+                    this.points = 30;
+                } else if (rand < 0.45) {
+                    this.type = 'bomb'; 
+                    this.color = '#e74c3c';
+                    this.vy = Math.random() * 3 + 2; 
+                    this.points = -20;
+                } else {
+                    this.type = 'gem'; 
+                    this.color = '#00ff88';
+                    this.vy = Math.random() * 2 + 2.5;
+                    this.points = 10;
+                }
+                
+                this.vx = (Math.random() - 0.5) * 1.5;
+                this.active = true;
+                this.rotation = Math.random() * Math.PI;
+                this.rotSpeed = (Math.random() - 0.5) * 0.2;
+                
+                // משתנה לבדיקה אם הפצצה נהדפה על ידי שחקן עם מגן
+                this.isDeflected = false; 
+            }
+
+            update() {
+                this.y += this.vy;
+                this.x += this.vx;
+                this.rotation += this.rotSpeed;
+
+                if (this.x < this.radius || this.x > canvas.width - this.radius) {
+                    this.vx *= -1;
+                }
+
+                if (this.y > canvas.height + 20) {
+                    this.active = false;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.color;
+
+                if (this.type === 'gem' || this.type === 'freeze') {
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -this.radius);
+                    ctx.lineTo(this.radius, 0);
+                    ctx.lineTo(0, this.radius);
+                    ctx.lineTo(-this.radius, 0);
+                    ctx.fill();
+                    
+                    if (this.type === 'freeze') {
+                        // הוספת סמל קטן לקיפאון
+                        ctx.fillStyle = '#fff';
+                        ctx.fillRect(-3, -3, 6, 6);
+                    }
+                } else if (this.type === 'star') {
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    for(let i=0; i<5; i++) {
+                        ctx.lineTo(Math.cos((18+i*72)/180*Math.PI)*this.radius, -Math.sin((18+i*72)/180*Math.PI)*this.radius);
+                        ctx.lineTo(Math.cos((54+i*72)/180*Math.PI)*(this.radius/2.5), -Math.sin((54+i*72)/180*Math.PI)*(this.radius/2.5));
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.type === 'bomb') {
+                    ctx.fillStyle = this.isDeflected ? '#c0392b' : '#333'; // פצצה נהדפת נראית אדומה יותר
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius, 0, Math.PI*2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = this.color;
+                    ctx.shadowBlur = 0;
+                    ctx.font = '16px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('!', 0, 0);
+                } else if (this.type === 'shield') {
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+        }
+
+        class FloatingText {
+            constructor(x, y, text, color) {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.color = color;
+                this.life = 1.0;
+                this.vy = -1.5;
+            }
+            update() { this.y += this.vy; this.life -= 0.02; }
+            draw() {
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.font = 'bold 20px Heebo';
+                ctx.textAlign = 'center';
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = '#000';
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.globalAlpha = 1.0;
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        let p1, p2;
+        let items = [];
+        let floatTexts = [];
+        let gameTime = 60;
+        let isPlaying = false;
+        let lastTime = 0;
+        let spawnRate = 40;
+        let frameCount = 0;
+        let gameLoopId;
+        
+        function playSound(type) {
+            if (!soundEnabled) return;
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            
+            if (type === 'gem') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'star') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(600, now); osc.frequency.setValueAtTime(1200, now + 0.2);
+                gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            } else if (type === 'bomb') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+                gain.gain.setValueAtTime(0.4, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            } else if (type === 'bump') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'freeze') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(1000, now); osc.frequency.linearRampToValueAtTime(2000, now + 0.2);
+                gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0, now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
+            } else if (type === 'shield') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(400, now); osc.frequency.linearRampToValueAtTime(800, now + 0.3);
+                gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            } else if (type === 'deflect') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
+                gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('sound-btn').innerText = soundEnabled ? '🔊 קול פועל' : '🔇 קול כבוי';
+        }
+
+        function spawnParticles(x, y, color) {
+            for(let i=0; i<6; i++) {
+                floatTexts.push({
+                    x: x, y: y, text: '✦', color: color,
+                    life: 1.0, vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5,
+                    update: function() { this.x+=this.vx; this.y+=this.vy; this.life-=0.05; },
+                    draw: function() { ctx.globalAlpha=Math.max(0,this.life); ctx.fillStyle=this.color; ctx.fillText(this.text, this.x, this.y); ctx.globalAlpha=1; }
+                });
+            }
+        }
+
+        function initGame() {
+            p1 = new Player(200, '#00d2ff', 'KeyA', 'KeyD', true);
+            p2 = new Player(550, '#ff3366', 'ArrowLeft', 'ArrowRight', false);
+            items = [];
+            floatTexts = [];
+            gameTime = 60;
+            frameCount = 0;
+            spawnRate = 45;
+            updateUI();
+            
+            document.getElementById('timer-box').classList.remove('hurry-up');
+            
+            if (audioCtx && soundEnabled) audioCtx.resume();
+        }
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+            initGame();
+            isPlaying = true;
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resetGame() { startGame(); }
+
+        function updateUI() {
+            document.getElementById('score1').innerText = p1.score;
+            document.getElementById('score2').innerText = p2.score;
+            document.getElementById('timer-box').innerText = Math.ceil(gameTime);
+            
+            let p1b = document.getElementById('p1-score-box');
+            let p2b = document.getElementById('p2-score-box');
+            p1b.style.transform = p1.score > p2.score ? 'scale(1.1)' : 'scale(1)';
+            p2b.style.transform = p2.score > p1.score ? 'scale(1.1)' : 'scale(1)';
+        }
+
+        function checkCollisions() {
+            // התנגשות שחקנים (דחיפה)
+            let pCenter1 = p1.x + p1.width/2;
+            let pCenter2 = p2.x + p2.width/2;
+            let dist = Math.abs(pCenter1 - pCenter2);
+            
+            if (dist < p1.width) {
+                playSound('bump');
+                let pushForce = (p1.width - dist) / 2 + 2;
+                
+                // אם למישהו יש מגן, הוא דוחף הרבה יותר חזק!
+                let p1Force = p1.shieldTimer > 0 ? pushForce * 3 : pushForce;
+                let p2Force = p2.shieldTimer > 0 ? pushForce * 3 : pushForce;
+                
+                // הוספת אפקט מכה ויזואלי
+                spawnParticles((p1.x+p2.x)/2 + p1.width/2, p1.y, '#fff');
+
+                if (pCenter1 < pCenter2) {
+                    p1.x -= p2Force; p1.vx -= p2Force;
+                    p2.x += p1Force; p2.vx += p1Force;
+                } else {
+                    p1.x += p2Force; p1.vx += p2Force;
+                    p2.x -= p1Force; p2.vx -= p1Force;
+                }
+            }
+
+            // איסוף חפצים
+            for (let i = items.length - 1; i >= 0; i--) {
+                let item = items[i];
+                let itemRight = item.x + item.radius;
+                let itemLeft = item.x - item.radius;
+                let itemBottom = item.y + item.radius;
+
+                // שחקן 1
+                if (itemBottom > p1.y && itemBottom < p1.y + p1.height && itemRight > p1.x && itemLeft < p1.x + p1.width) {
+                    if (handleItemCollection(p1, p2, item)) items.splice(i, 1);
+                    continue;
+                }
+                
+                // שחקן 2
+                if (itemBottom > p2.y && itemBottom < p2.y + p2.height && itemRight > p2.x && itemLeft < p2.x + p2.width) {
+                    if (handleItemCollection(p2, p1, item)) items.splice(i, 1);
+                }
+            }
+        }
+
+        // מחזיר true אם צריך למחוק את החפץ, false אם הוא נהדף (מסירות פצצה)
+        function handleItemCollection(player, opponent, item) {
+            // לוגיקה מיוחדת לפצצות ומגנים
+            if (item.type === 'bomb' && player.shieldTimer > 0) {
+                // המגן הודף את הפצצה לעבר היריב!
+                playSound('deflect');
+                item.isDeflected = true;
+                item.vy = -6; // קופצת למעלה
+                item.vx = player.x < opponent.x ? 8 : -8; // עפה לכיוון היריב
+                spawnParticles(item.x, item.y, '#9b59b6');
+                floatTexts.push(new FloatingText(player.x + player.width/2, player.y - 10, "הדיפה!", "#9b59b6"));
+                return false; // החפץ לא נמחק, הוא עף
+            }
+
+            // איסוף רגיל
+            playSound(item.type);
+            spawnParticles(item.x, item.y, item.color);
+            
+            if (item.points !== 0) {
+                player.score += item.points;
+                let text = item.points > 0 ? `+${item.points}` : item.points;
+                floatTexts.push(new FloatingText(player.x + player.width/2, player.y - 10, text, item.color));
+            }
+
+            if (item.type === 'bomb') {
+                player.stunTimer = 60; 
+                player.isFrozen = false;
+                player.vx = player.isP1 ? -15 : 15; 
+            } else if (item.type === 'freeze') {
+                opponent.stunTimer = 90; // היריב קופא לזמן ארוך יותר!
+                opponent.isFrozen = true;
+                floatTexts.push(new FloatingText(opponent.x + opponent.width/2, opponent.y - 10, "קפא!", "#00ffff"));
+            } else if (item.type === 'shield') {
+                player.shieldTimer = 300; // 5 שניות של מגן כוח
+                floatTexts.push(new FloatingText(player.x + player.width/2, player.y - 10, "מגן כוח!", "#9b59b6"));
+            }
+            
+            updateUI();
+            return true;
+        }
+
+        function gameLoop(timestamp) {
+            if (!isPlaying) return;
+            
+            let dt = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+            
+            gameTime -= dt;
+            
+            if (gameTime <= 10 && !document.getElementById('timer-box').classList.contains('hurry-up')) {
+                document.getElementById('timer-box').classList.add('hurry-up');
+                spawnRate = 20; 
+            }
+
+            if (gameTime <= 0) {
+                endGame();
+                return;
+            }
+
+            if (Math.floor(gameTime) !== parseInt(document.getElementById('timer-box').innerText)) {
+                document.getElementById('timer-box').innerText = Math.floor(gameTime);
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = 'rgba(255,255,255,0.02)';
+            for(let i=0; i<20; i++) {
+                ctx.beginPath(); ctx.arc(Math.random()*canvas.width, Math.random()*canvas.height, Math.random()*2, 0, Math.PI*2); ctx.fill();
+            }
+
+            p1.update();
+            p2.update();
+            
+            frameCount++;
+            if (frameCount >= spawnRate) {
+                items.push(new Item());
+                frameCount = 0;
+            }
+
+            items.forEach(item => item.update());
+            items = items.filter(item => item.active); 
+
+            checkCollisions();
+
+            items.forEach(item => item.draw());
+            p1.draw();
+            p2.draw();
+            
+            for (let i = floatTexts.length - 1; i >= 0; i--) {
+                floatTexts[i].update();
+                floatTexts[i].draw();
+                if (floatTexts[i].life <= 0) floatTexts.splice(i, 1);
+            }
+
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+            isPlaying = false;
+            let text = "";
+            if (p1.score > p2.score) {
+                text = "שחקן 1 (כחול) ניצח!";
+                document.getElementById('winner-text').style.color = '#00d2ff';
+            } else if (p2.score > p1.score) {
+                text = "שחקן 2 (אדום) ניצח!";
+                document.getElementById('winner-text').style.color = '#ff3366';
+            } else {
+                text = "תיקו מדהים!";
+                document.getElementById('winner-text').style.color = '#f1c40f';
+            }
+            
+            document.getElementById('winner-text').innerText = text;
+            document.getElementById('final-score-text').innerText = `${p1.score} - ${p2.score}`;
+            document.getElementById('game-over-screen').classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>

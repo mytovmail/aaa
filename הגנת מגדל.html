@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מגני הרשת - גרסת העלית</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+.map-btn.selected { border-color: #38bdf8; background: rgba(56, 189, 248, 0.1); color: #38bdf8; font-weight: bold; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 lg:p-4 text-right overflow-hidden text-slate-200">
+
+    <a href="index.html" class="fixed top-4 right-4 z-[9999] bg-slate-900/80 backdrop-blur-md border border-slate-700 text-white font-bold py-2 px-4 rounded-full shadow-lg hover:bg-slate-800 hover:text-cyan-400 hover:border-cyan-400 transition-all flex items-center gap-2">
+        <span>🏠</span> חזרה לפורטל
+    </a>
+
+    <!-- מסך בחירת מצב משחק -->
+    <div id="screen-select" class="glass-panel p-8 rounded-2xl max-w-lg w-full text-center relative overflow-hidden">
+
+        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;800&display=swap');
+        body { font-family: 'Rubik', sans-serif; background-color: #020617; user-select: none; }
+        canvas { cursor: crosshair; touch-action: none; }
+        .hidden-screen { display: none !important; }
+        .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(56, 189, 248, 0.2); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); }
+        .tower-btn.selected { border-color: #38bdf8; box-shadow: 0 0 15px rgba(56, 189, 248, 0.5); background: rgba(56, 189, 248, 0.1); }
+        .map-btn.selected { border-color: #38bdf8; background: rgba(56, 189, 248, 0.1); color: #38bdf8; font-weight: bold; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 lg:p-4 text-right overflow-hidden text-slate-200">
+
+    <!-- מסך בחירת מצב משחק -->
+    <div id="screen-select" class="glass-panel p-8 rounded-2xl max-w-lg w-full text-center relative overflow-hidden">
+        <div class="absolute -top-20 -left-20 w-40 h-40 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+        <div class="absolute -bottom-20 -right-20 w-40 h-40 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" style="animation-delay: 2s;"></div>
+        
+        <h1 class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 mb-2">מגני הרשת</h1>
+        <p class="text-slate-400 mb-6 font-semibold tracking-wide">גרסת העלית האסטרטגית</p>
+        
+        <!-- בחירת מפה -->
+        <div class="mb-6 text-right bg-slate-900/50 p-4 rounded-xl border border-slate-700 relative z-10">
+            <p class="text-slate-300 text-sm mb-3 font-bold"><i class="fas fa-map"></i> בחר זירת קרב:</p>
+            <div class="flex gap-2">
+                <button class="map-btn flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm transition-all selected" onclick="selectMap('CLASSIC', this)">קלאסית</button>
+                <button class="map-btn flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm transition-all" onclick="selectMap('ZIGZAG', this)">זיג-זג</button>
+                <button class="map-btn flex-1 bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm transition-all" onclick="selectMap('SPIRAL', this)">ספירלה</button>
+            </div>
+        </div>
+
+        <div class="space-y-4 relative z-10">
+            <button onclick="startGameAI()" class="w-full bg-gradient-to-r from-indigo-600 to-blue-700 hover:from-indigo-500 hover:to-blue-600 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-[1.02] shadow-[0_0_20px_rgba(79,70,229,0.4)] text-lg flex items-center justify-center gap-3">
+                <i class="fas fa-robot text-xl"></i> שחק נגד בינה מלאכותית (AI)
+            </button>
+            <button onclick="startPVPSetup()" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-[1.02] shadow-[0_0_20px_rgba(168,85,247,0.4)] text-lg flex items-center justify-center gap-3">
+                <i class="fas fa-globe text-xl"></i> שחק נגד חבר ברשת (P2P)
+            </button>
+        </div>
+    </div>
+
+    <!-- מסך טעינה -->
+    <div id="screen-loading" class="text-cyan-400 text-3xl font-bold animate-pulse hidden-screen flex flex-col items-center gap-4">
+        <i class="fas fa-circle-notch fa-spin text-5xl"></i>
+        <span>מייצר קשר מוצפן...</span>
+    </div>
+
+    <!-- מסך תפריט רשת חברתית -->
+    <div id="screen-menu-pvp" class="glass-panel p-8 rounded-2xl max-w-md w-full text-center hidden-screen">
+        <h1 class="text-3xl font-bold text-cyan-400 mb-6">מולטיפלייר רשת</h1>
+        <div class="bg-slate-900/80 p-5 rounded-xl mb-6 border border-slate-700 shadow-inner">
+            <p class="text-slate-400 text-sm mb-3"><i class="fas fa-key"></i> קוד החדר שלך (שלח ליריב):</p>
+            <div id="peer-id-display" class="bg-black text-green-400 p-4 rounded-lg font-mono text-xl tracking-wider break-all select-all cursor-pointer hover:bg-gray-900 transition" onclick="navigator.clipboard.writeText(this.innerText); alert('הקוד הועתק!')">
+                טוען...
+            </div>
+            <p class="text-slate-500 text-xs mt-3 animate-pulse">ממתין להתחברות יריב...</p>
+        </div>
+        <div class="flex items-center my-6 gap-3">
+            <div class="h-px bg-slate-700 flex-1"></div>
+            <span class="text-slate-500 font-bold">או</span>
+            <div class="h-px bg-slate-700 flex-1"></div>
+        </div>
+        <div class="space-y-4">
+            <p class="text-slate-400 text-sm text-right"><i class="fas fa-sign-in-alt"></i> התחבר לחדר של חבר:</p>
+            <input type="text" id="join-id-input" placeholder="הדבק קוד חדר כאן..." oninput="updateJoinButton()" class="w-full bg-slate-900 border border-slate-600 text-white p-4 rounded-xl focus:outline-none focus:border-cyan-500 text-center font-mono text-lg transition-all">
+            <button id="btn-join" onclick="connectToOpponent()" disabled class="w-full bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-all shadow-lg text-lg">
+                התחבר והתחל מלחמה!
+            </button>
+        </div>
+        <button onclick="returnToMenu()" class="mt-6 text-slate-400 hover:text-white underline text-sm transition"><i class="fas fa-arrow-right"></i> חזור אחורה</button>
+    </div>
+
+    <!-- מסך משחק פעיל -->
+    <div id="screen-playing" class="w-full max-w-[1100px] hidden-screen flex flex-col gap-3 relative">
+        
+        <!-- סרגל אימוג'י (צד שמאל) -->
+        <div class="absolute -left-14 top-1/4 flex flex-col gap-3 z-30 hidden lg:flex">
+            <button onclick="sendEmoji('😎')" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-full text-2xl hover:bg-slate-700 hover:scale-110 transition shadow-lg">😎</button>
+            <button onclick="sendEmoji('😱')" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-full text-2xl hover:bg-slate-700 hover:scale-110 transition shadow-lg">😱</button>
+            <button onclick="sendEmoji('😈')" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-full text-2xl hover:bg-slate-700 hover:scale-110 transition shadow-lg">😈</button>
+            <button onclick="sendEmoji('😡')" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-full text-2xl hover:bg-slate-700 hover:scale-110 transition shadow-lg">😡</button>
+            <button onclick="sendEmoji('💸')" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-full text-2xl hover:bg-slate-700 hover:scale-110 transition shadow-lg">💸</button>
+        </div>
+
+        <!-- סרגל עליון (HUD) -->
+        <div class="glass-panel p-3 rounded-xl flex justify-between items-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50"></div>
+            
+            <div class="flex items-center gap-3 lg:gap-6">
+                <!-- חיים -->
+                <div class="text-center px-4 py-1 bg-slate-800/80 rounded-lg border border-slate-700">
+                    <span class="block text-slate-400 text-[10px] uppercase tracking-wider font-bold">ליבת הבסיס</span>
+                    <span id="ui-lives" class="text-2xl font-extrabold text-green-400 drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]">20 <i class="fas fa-heart text-lg"></i></span>
+                </div>
+                <!-- כסף -->
+                <div class="text-center px-4 py-1 bg-slate-800/80 rounded-lg border border-slate-700">
+                    <span class="block text-slate-400 text-[10px] uppercase tracking-wider font-bold">תקציב הגנה</span>
+                    <span id="ui-money" class="text-2xl font-extrabold text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]">200 <i class="fas fa-coins text-lg"></i></span>
+                </div>
+                
+                <!-- מהירות וסאונד -->
+                <div class="flex flex-col lg:flex-row gap-2">
+                    <button onclick="toggleSpeed()" id="btn-speed" class="text-cyan-400 hover:bg-cyan-900/50 transition w-10 h-10 flex items-center justify-center rounded-full bg-slate-800 border border-slate-700 font-bold text-sm shadow-inner">1x</button>
+                    <button onclick="toggleSound()" id="btn-sound" class="text-slate-400 hover:text-white transition w-10 h-10 flex items-center justify-center rounded-full bg-slate-800 border border-slate-700 shadow-inner"><i class="fas fa-volume-up"></i></button>
+                </div>
+            </div>
+            
+            <!-- סטטוס יריב -->
+            <div class="text-center bg-red-950/40 px-6 py-2 rounded-lg border border-red-900/50 shadow-inner flex flex-col items-center">
+                <span id="ui-opponent-title" class="block text-red-400 text-[10px] uppercase tracking-wider font-bold">מצב יריב</span>
+                <span id="ui-opponent-lives" class="text-xl font-extrabold text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]">20 <i class="fas fa-heart-broken"></i></span>
+            </div>
+        </div>
+
+        <!-- אזור המשחק והתפריטים -->
+        <div class="flex flex-col lg:flex-row gap-3">
+            
+            <!-- משטח המשחק המרכזי -->
+            <div class="relative glass-panel rounded-xl overflow-hidden shadow-2xl flex-[3] border-2 border-slate-700/50" id="canvas-container">
+                <canvas id="gameCanvas" width="800" height="500" class="block w-full h-auto bg-slate-900" onmousemove="handleMouseMove(event)" onclick="handleCanvasClick(event)" onmouseleave="handleMouseLeave()"></canvas>
+                
+                <!-- תפריט שדרוג צף -->
+                <div id="upgrade-menu" class="absolute hidden-screen glass-panel p-3 rounded-lg flex flex-col gap-2 transform -translate-x-1/2 -translate-y-[110%] z-20 w-48 shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-cyan-500/30">
+                    <div class="text-center border-b border-slate-600 pb-2 mb-1">
+                        <h4 id="upg-title" class="text-cyan-400 font-bold text-sm">תותח פלזמה</h4>
+                        <p id="upg-level" class="text-xs text-slate-400">רמה 1</p>
+                    </div>
+                    <button id="btn-upgrade" onclick="upgradeSelectedTower()" class="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-white text-sm py-2 rounded font-bold transition flex justify-between px-2 items-center">
+                        <span><i class="fas fa-arrow-up"></i> שדרג</span><span id="upg-cost" class="text-yellow-300">50💰</span>
+                    </button>
+                    <button onclick="sellSelectedTower()" class="bg-red-900/80 hover:bg-red-800 text-red-200 text-sm py-1.5 rounded transition flex justify-between px-2 border border-red-700/50">
+                        <span><i class="fas fa-dollar-sign"></i> מכור</span><span id="upg-sell" class="text-green-400">+25💰</span>
+                    </button>
+                    <div id="upg-arrow" class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 glass-panel border-b border-r border-cyan-500/30 rotate-45 z-[-1]"></div>
+                </div>
+
+                <!-- חלונית סיום משחק -->
+                <div id="overlay-game-over" class="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-50 hidden-screen backdrop-blur-sm">
+                    <div class="absolute w-full h-full pointer-events-none" id="confetti-container"></div>
+                    <h2 id="win-message" class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 mb-8 drop-shadow-2xl text-center leading-tight"></h2>
+                    <button onclick="returnToMenu()" class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white px-8 py-4 rounded-xl font-bold text-xl transition-all shadow-[0_0_20px_rgba(56,189,248,0.5)] transform hover:scale-105">
+                        <i class="fas fa-home"></i> תפריט ראשי
+                    </button>
+                </div>
+            </div>
+
+            <!-- פאנל פעולות וחניות (צד ימין/למטה) -->
+            <div class="flex flex-col gap-3 flex-[1] min-w-[250px]">
+                
+                <!-- חנות מגדלים -->
+                <div class="glass-panel rounded-xl p-4">
+                    <h3 class="text-slate-300 font-bold mb-3 border-b border-slate-700 pb-2 text-sm uppercase tracking-wider"><i class="fas fa-tools"></i> הגנה ובנייה</h3>
+                    <div class="flex flex-col gap-2" id="shop-container"></div>
+                </div>
+
+                <!-- חנות שיגור ליריב -->
+                <div class="glass-panel rounded-xl p-4 flex-1 flex flex-col">
+                    <h3 class="text-purple-300 font-bold mb-3 border-b border-purple-900/50 pb-2 text-sm uppercase tracking-wider"><i class="fas fa-meteor"></i> התקפת היריב</h3>
+                    <div class="flex flex-col gap-2 flex-1 justify-center">
+                        <button onclick="handleSendEnemy('SCOUT')" id="btn-send-scout" class="enemy-btn bg-slate-800 hover:bg-slate-700 disabled:opacity-50 border border-orange-500/30 rounded-lg p-2 text-right transition flex justify-between items-center group">
+                            <div><span class="text-orange-400 font-bold text-sm"><i class="fas fa-fighter-jet ml-1"></i> סייר</span><div class="text-[10px] text-slate-400">מהיר וזול</div></div>
+                            <span class="bg-black/50 px-2 py-1 rounded text-xs text-yellow-300">20💰</span>
+                        </button>
+                        <button onclick="handleSendEnemy('FIGHTER')" id="btn-send-fighter" class="enemy-btn bg-slate-800 hover:bg-slate-700 disabled:opacity-50 border border-red-500/30 rounded-lg p-2 text-right transition flex justify-between items-center">
+                            <div><span class="text-red-400 font-bold text-sm"><i class="fas fa-space-shuttle ml-1"></i> לוחם</span><div class="text-[10px] text-slate-400">התקפה רגילה</div></div>
+                            <span class="bg-black/50 px-2 py-1 rounded text-xs text-yellow-300">40💰</span>
+                        </button>
+                        <button onclick="handleSendEnemy('TANK')" id="btn-send-tank" class="enemy-btn bg-slate-800 hover:bg-slate-700 disabled:opacity-50 border border-red-700/50 rounded-lg p-2 text-right transition flex justify-between items-center">
+                            <div><span class="text-red-600 font-bold text-sm"><i class="fas fa-shield-alt ml-1"></i> טנק</span><div class="text-[10px] text-slate-400">איטי ומשוריין</div></div>
+                            <span class="bg-black/50 px-2 py-1 rounded text-xs text-yellow-300">80💰</span>
+                        </button>
+                        <button onclick="handleSendEnemy('BOSS')" id="btn-send-boss" class="enemy-btn bg-gradient-to-r from-purple-900 to-slate-800 hover:from-purple-800 disabled:opacity-50 border border-purple-500/50 rounded-lg p-3 text-right transition flex justify-between items-center mt-2 shadow-[0_0_10px_rgba(168,85,247,0.2)]">
+                            <div><span class="text-purple-400 font-bold text-sm"><i class="fas fa-skull ml-1"></i> ספינת אם</span><div class="text-[10px] text-purple-200">מתפצל במותו!</div></div>
+                            <span class="bg-purple-950 px-2 py-1 rounded text-xs text-yellow-300 border border-purple-500/50">200💰</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================
+        // מנוע סאונד
+        // =========================================================================
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx; let soundEnabled = true;
+
+        function initAudio() { if (!audioCtx) audioCtx = new AudioContext(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('btn-sound');
+            if(soundEnabled) { btn.innerHTML = '<i class="fas fa-volume-up"></i>'; btn.classList.remove('text-red-400'); initAudio(); } 
+            else { btn.innerHTML = '<i class="fas fa-volume-mute"></i>'; btn.classList.add('text-red-400'); }
+        }
+
+        const SoundSys = {
+            playTone: (freq, type, duration, vol=0.1, slideFreq=null) => {
+                if(!soundEnabled || !audioCtx) return;
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                if(slideFreq) osc.frequency.exponentialRampToValueAtTime(slideFreq, audioCtx.currentTime + duration);
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + duration);
+            },
+            shootBasic: () => SoundSys.playTone(400, 'square', 0.1, 0.05, 200),
+            shootSniper: () => SoundSys.playTone(150, 'sawtooth', 0.3, 0.1, 50),
+            shootLaser: () => SoundSys.playTone(800, 'sine', 0.05, 0.03, 1200),
+            explosion: () => SoundSys.playTone(100, 'square', 0.3, 0.1, 20),
+            build: () => SoundSys.playTone(600, 'sine', 0.1, 0.1, 800),
+            upgrade: () => { SoundSys.playTone(400, 'sine', 0.1, 0.1, 600); setTimeout(()=>SoundSys.playTone(600,'sine',0.2,0.1,800), 100); },
+            error: () => SoundSys.playTone(150, 'sawtooth', 0.2, 0.1),
+            bossAlert: () => { SoundSys.playTone(300, 'sawtooth', 0.5, 0.15, 200); setTimeout(()=>SoundSys.playTone(300, 'sawtooth', 0.5, 0.15, 200), 600); }
+        };
+
+        // =========================================================================
+        // הגדרות, מפות וחנות
+        // =========================================================================
+        const CANVAS_WIDTH = 800; const CANVAS_HEIGHT = 500; const TILE_SIZE = 50;
+        const COLS = Math.floor(CANVAS_WIDTH / TILE_SIZE); const ROWS = Math.floor(CANVAS_HEIGHT / TILE_SIZE);
+        const STARTING_MONEY = 200; const STARTING_LIVES = 20;
+
+        const MAPS = {
+            'CLASSIC': [ {x:-50, y:125}, {x:275, y:125}, {x:275, y:375}, {x:575, y:375}, {x:575, y:225}, {x:850, y:225} ],
+            'ZIGZAG': [ {x:-50, y:125}, {x:175, y:125}, {x:175, y:425}, {x:425, y:425}, {x:425, y:75}, {x:675, y:75}, {x:675, y:275}, {x:850, y:275} ],
+            'SPIRAL': [ {x:425, y:-50}, {x:425, y:425}, {x:125, y:425}, {x:125, y:125}, {x:675, y:125}, {x:675, y:275}, {x:425, y:275} ]
+        };
+        let currentMapKey = 'CLASSIC';
+        let WAYPOINTS = MAPS[currentMapKey];
+        let grid = [];
+
+        function selectMap(key, btnElem) {
+            document.querySelectorAll('.map-btn').forEach(b => b.classList.remove('selected'));
+            btnElem.classList.add('selected');
+            currentMapKey = key;
+        }
+
+        const TOWER_DICTIONARY = {
+            'BASIC': { id: 'BASIC', name: 'תותח פלזמה', desc: 'מאוזן ואמין', cost: 50, range: 140, damage: 25, cooldown: 0.7, color: '#3b82f6', projColor: '#bae6fd', icon: 'fa-crosshairs', upgrades: [{ cost: 40, damage: 35, range: 150 }, { cost: 80, damage: 55, range: 160 }] },
+            'RAPID': { id: 'RAPID', name: 'מקרן לייזר', desc: 'קצב אש מטורף', cost: 150, range: 110, damage: 8, cooldown: 0.15, color: '#10b981', projColor: '#a7f3d0', icon: 'fa-bolt', upgrades: [{ cost: 100, damage: 12, range: 120 }, { cost: 150, damage: 20, range: 130 }] },
+            'SNIPER': { id: 'SNIPER', name: 'צלף חודר', desc: 'נזק וטווח אדירים', cost: 120, range: 250, damage: 120, cooldown: 2.0, color: '#f97316', projColor: '#fed7aa', icon: 'fa-bullseye', upgrades: [{ cost: 120, damage: 200, range: 300 }, { cost: 200, damage: 350, range: 350 }] }
+        };
+
+        const ENEMY_DICTS = {
+            'SCOUT': { hp: 20, speed: 100, radius: 10, color: '#f97316', reward: 5, cost: 20 },
+            'FIGHTER': { hp: 50, speed: 60, radius: 12, color: '#ef4444', reward: 10, cost: 40 },
+            'TANK': { hp: 160, speed: 35, radius: 16, color: '#b91c1c', reward: 20, cost: 80 },
+            'BOSS': { hp: 800, speed: 22, radius: 24, color: '#fbbf24', reward: 100, cost: 200 }
+        };
+
+        function calculateGrid() {
+            grid = Array(COLS).fill().map(() => Array(ROWS).fill(false));
+            const PATH_WIDTH = 40;
+            for (let x = 0; x < COLS; x++) {
+                for (let y = 0; y < ROWS; y++) {
+                    let c = { x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2 };
+                    for (let i = 0; i < WAYPOINTS.length - 1; i++) {
+                        let l2 = Math.pow(WAYPOINTS[i].x - WAYPOINTS[i+1].x, 2) + Math.pow(WAYPOINTS[i].y - WAYPOINTS[i+1].y, 2);
+                        let t = Math.max(0, Math.min(1, ((c.x - WAYPOINTS[i].x) * (WAYPOINTS[i+1].x - WAYPOINTS[i].x) + (c.y - WAYPOINTS[i].y) * (WAYPOINTS[i+1].y - WAYPOINTS[i].y)) / (l2||1)));
+                        let distSq = Math.pow(c.x - (WAYPOINTS[i].x + t * (WAYPOINTS[i+1].x - WAYPOINTS[i].x)), 2) + Math.pow(c.y - (WAYPOINTS[i].y + t * (WAYPOINTS[i+1].y - WAYPOINTS[i].y)), 2);
+                        if (distSq < PATH_WIDTH * PATH_WIDTH) { grid[x][y] = true; break; }
+                    }
+                }
+            }
+        }
+
+        // === משתני מצב משחק ===
+        let appState = 'SELECT_MODE'; let peer = null; let conn = null; let gameOver = false; let animationFrameId;
+        let gameSpeed = 1;
+        
+        let gameState = {
+            gameMode: 'PVP', towers: [], enemies: [], projectiles: [], enemyQueue: [], particles: [], floatingTexts: [],
+            money: STARTING_MONEY, lives: STARTING_LIVES, opponentLives: STARTING_LIVES,
+            timeElapsed: -3, baseSpawnTimer: 0, queueTimer: 0, lastFrameTime: 0, isDead: false, nextBossTime: 60,
+            ai: { lives: STARTING_LIVES, money: STARTING_MONEY, defenseLoad: 0, attackCooldown: 8, outgoingQueue: [], outgoingTimer: 0 }
+        };
+
+        let selectedTowerToBuild = 'BASIC'; let hoverGridX = -1; let hoverGridY = -1; let selectedExistingTower = null;
+        const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
+
+        // =========================================================================
+        // UI ופונקציות בסיס
+        // =========================================================================
+        function toggleSpeed() {
+            gameSpeed = gameSpeed === 1 ? 2 : 1;
+            const btn = document.getElementById('btn-speed');
+            btn.innerText = gameSpeed + 'x';
+            btn.classList.toggle('text-white', gameSpeed === 2);
+            btn.classList.toggle('bg-cyan-600', gameSpeed === 2);
+        }
+
+        function buildShopUI() {
+            const container = document.getElementById('shop-container'); container.innerHTML = '';
+            for (let key in TOWER_DICTIONARY) {
+                const t = TOWER_DICTIONARY[key];
+                const btn = document.createElement('button');
+                btn.className = `tower-btn text-right p-3 rounded-lg border border-slate-700 bg-slate-800/50 hover:bg-slate-700/50 transition relative overflow-hidden flex flex-col gap-1 w-full ${selectedTowerToBuild === key ? 'selected' : ''}`;
+                btn.onclick = () => { selectedTowerToBuild = key; buildShopUI(); };
+                btn.innerHTML = `<div class="flex justify-between items-center"><span class="font-bold" style="color:${t.color}"><i class="fas ${t.icon} ml-1"></i> ${t.name}</span><span class="bg-black/50 px-2 py-0.5 rounded text-xs text-yellow-300">${t.cost}💰</span></div><div class="text-[10px] text-slate-400 mt-1 flex justify-between"><span>נזק: ${t.damage}</span><span>טווח: ${t.range}</span></div>`;
+                container.appendChild(btn);
+            }
+        }
+        buildShopUI();
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.glass-panel, #screen-loading, #overlay-game-over').forEach(el => {
+                if(el.id && el.id.startsWith('screen-')) el.classList.add('hidden-screen');
+            });
+            document.getElementById(screenId).classList.remove('hidden-screen');
+        }
+
+        function updateUI() {
+            document.getElementById('ui-money').innerHTML = `${Math.floor(gameState.money)} <i class="fas fa-coins text-lg"></i>`;
+            const livesEl = document.getElementById('ui-lives');
+            livesEl.innerHTML = `${gameState.lives} <i class="fas fa-heart text-lg"></i>`;
+            if (gameState.lives <= 5) livesEl.classList.add('text-red-500', 'animate-pulse'); else livesEl.classList.remove('text-red-500', 'animate-pulse');
+            document.getElementById('ui-opponent-lives').innerHTML = `${gameState.opponentLives} <i class="fas fa-heart-broken"></i>`;
+
+            // עדכון כפתורי שיגור
+            ['SCOUT', 'FIGHTER', 'TANK', 'BOSS'].forEach(type => {
+                const btn = document.getElementById(`btn-send-${type.toLowerCase()}`);
+                if(btn) btn.disabled = (gameState.money < ENEMY_DICTS[type].cost || gameOver || gameState.timeElapsed < 0);
+            });
+            updateUpgradeMenu();
+        }
+
+        function spawnFloatingText(x, y, text, color, life=1.0, size=16) {
+            gameState.floatingTexts.push({ x, y, text, color, life, initialY: y, size });
+        }
+
+        function sendEmoji(emoji) {
+            spawnFloatingText(CANVAS_WIDTH/2, CANVAS_HEIGHT/2 + Math.random()*50, emoji, '#fff', 3.0, 50);
+            if(conn) conn.send({type: 'EMOJI', emoji});
+        }
+
+        // =========================================================================
+        // רשת P2P
+        // =========================================================================
+        function startPVPSetup() {
+            initAudio(); showScreen('screen-loading');
+            peer = new Peer();
+            peer.on('open', (id) => { document.getElementById('peer-id-display').innerText = id; showScreen('screen-menu-pvp'); });
+            peer.on('connection', setupConnectionEvents);
+        }
+        function updateJoinButton() { document.getElementById('btn-join').disabled = document.getElementById('join-id-input').value.trim() === ''; }
+        function connectToOpponent() {
+            initAudio(); const joinId = document.getElementById('join-id-input').value.trim();
+            if (!joinId || !peer) return;
+            showScreen('screen-loading'); const connection = peer.connect(joinId); setupConnectionEvents(connection);
+        }
+
+        function setupConnectionEvents(connection) {
+            connection.on('open', () => { conn = connection; startGame('PVP'); });
+            connection.on('data', (data) => {
+                if (data.type === 'SEND_ENEMY') gameState.enemyQueue.push({ isSent: true, type: data.enemyType, hpMultiplier: data.hpMultiplier });
+                else if (data.type === 'SYNC_STATS') { gameState.opponentLives = data.lives; updateUI(); }
+                else if (data.type === 'EMOJI') spawnFloatingText(CANVAS_WIDTH/2, CANVAS_HEIGHT/2 - 50 + Math.random()*100, data.emoji, '#fff', 3.0, 60);
+                else if (data.type === 'GAME_OVER') triggerGameOver('🎉 ניצחון מוחץ!', 'הבסיס של היריב הושמד כליל.');
+            });
+            connection.on('close', () => { if(!gameOver) triggerGameOver('ניתוק', 'היריב ברח מהמערכה.'); });
+        }
+        setInterval(() => { if (appState === 'PLAYING' && !gameOver && gameState.gameMode === 'PVP' && conn) conn.send({ type: 'SYNC_STATS', lives: gameState.lives }); }, 500);
+
+        // =========================================================================
+        // ניהול משחק מרכזי
+        // =========================================================================
+        function startGameAI() { initAudio(); document.getElementById('ui-opponent-title').innerText = "מצב מערכת AI"; startGame('AI'); }
+
+        function startGame(mode) {
+            appState = 'PLAYING'; gameOver = false; selectedExistingTower = null; gameSpeed = 1; document.getElementById('btn-speed').innerText = '1x';
+            document.getElementById('upgrade-menu').classList.add('hidden-screen'); document.getElementById('overlay-game-over').classList.add('hidden-screen');
+            
+            WAYPOINTS = MAPS[currentMapKey];
+            calculateGrid();
+
+            gameState = {
+                gameMode: mode, towers: [], enemies: [], projectiles: [], enemyQueue: [], particles: [], floatingTexts: [],
+                money: STARTING_MONEY, lives: STARTING_LIVES, opponentLives: STARTING_LIVES,
+                timeElapsed: -3, baseSpawnTimer: 0, queueTimer: 0, lastFrameTime: performance.now(), isDead: false, nextBossTime: 60,
+                ai: { lives: STARTING_LIVES, money: STARTING_MONEY, defenseLoad: 0, attackCooldown: 6, outgoingQueue: [], outgoingTimer: 0 }
+            };
+            
+            showScreen('screen-playing'); updateUI();
+            cancelAnimationFrame(animationFrameId); animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function spawnEnemyAt(type, hpMultiplier, isSent, x, y, wpIndex) {
+            const def = ENEMY_DICTS[type];
+            return {
+                x: x, y: y, waypointIndex: wpIndex, type: type,
+                hp: def.hp * hpMultiplier, maxHp: def.hp * hpMultiplier,
+                speed: def.speed, radius: def.radius, isSent: isSent, color: isSent ? '#a855f7' : def.color,
+                moneyReward: isSent ? def.cost * 0.5 : def.reward
+            };
+        }
+
+        function triggerGameOver(title, subtitle = "") {
+            gameOver = true; document.getElementById('win-message').innerHTML = `${title}<br><span class="text-2xl text-slate-400">${subtitle}</span>`;
+            document.getElementById('overlay-game-over').classList.remove('hidden-screen'); document.getElementById('upgrade-menu').classList.add('hidden-screen'); updateUI();
+        }
+        function returnToMenu() {
+            appState = 'SELECT_MODE'; gameOver = false; selectedExistingTower = null;
+            if (conn) { conn.close(); conn = null; } if (peer) { peer.destroy(); peer = null; }
+            showScreen('screen-select');
+        }
+        function checkDeath() {
+            if (gameState.lives <= 0 && !gameState.isDead) {
+                gameState.isDead = true; triggerGameOver('💀 מערכת קרסה', 'הבסיס שלך נפרץ.');
+                if (gameState.gameMode === 'PVP' && conn) conn.send({ type: 'GAME_OVER' });
+            }
+        }
+
+        function handleSendEnemy(type) {
+            const cost = ENEMY_DICTS[type].cost;
+            if (gameState.money >= cost && !gameOver && gameState.timeElapsed >= 0) {
+                gameState.money -= cost;
+                const strength = 1 + (Math.max(0, gameState.timeElapsed) / 60);
+
+                if (gameState.gameMode === 'PVP' && conn) {
+                    conn.send({ type: 'SEND_ENEMY', enemyType: type, hpMultiplier: strength });
+                } else if (gameState.gameMode === 'AI') {
+                    gameState.ai.defenseLoad += (cost * 2 * strength);
+                    if(type === 'BOSS') setTimeout(()=> spawnFloatingText(CANVAS_WIDTH/2, CANVAS_HEIGHT/2, "😡", '#fff', 2.0, 50), 1000); // AI reacts
+                }
+                SoundSys.playTone(300, 'square', 0.2, 0.05, 100);
+                spawnFloatingText(CANVAS_WIDTH - 50, CANVAS_HEIGHT - 50, `-${cost}💰`, '#ef4444');
+                updateUI();
+            }
+        }
+
+        // =========================================================================
+        // אינטראקציה (עכבר / בנייה / שדרוג)
+        // =========================================================================
+        function getMousePos(evt) {
+            const rect = canvas.getBoundingClientRect(); const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height;
+            return { x: (evt.clientX - rect.left) * scaleX, y: (evt.clientY - rect.top) * scaleY };
+        }
+        function handleMouseMove(e) { if(gameOver) return; const pos = getMousePos(e); hoverGridX = Math.floor(pos.x / TILE_SIZE); hoverGridY = Math.floor(pos.y / TILE_SIZE); }
+        function handleMouseLeave() { hoverGridX = -1; hoverGridY = -1; }
+
+        function handleCanvasClick(e) {
+            if (gameOver || gameState.timeElapsed < 0) return;
+            document.getElementById('upgrade-menu').classList.add('hidden-screen');
+            const pos = getMousePos(e); const gx = Math.floor(pos.x / TILE_SIZE); const gy = Math.floor(pos.y / TILE_SIZE);
+            if(gx < 0 || gx >= COLS || gy < 0 || gy >= ROWS) return;
+
+            const existingTowerIndex = gameState.towers.findIndex(t => Math.floor(t.x/TILE_SIZE) === gx && Math.floor(t.y/TILE_SIZE) === gy);
+            if(existingTowerIndex !== -1) {
+                selectedExistingTower = gameState.towers[existingTowerIndex]; SoundSys.playTone(800, 'sine', 0.05, 0.05);
+                positionUpgradeMenu(selectedExistingTower); return;
+            }
+            selectedExistingTower = null;
+
+            if (grid[gx][gy]) { SoundSys.error(); spawnFloatingText(pos.x, pos.y, "שטח חסום!", "#ef4444"); return; }
+
+            const tInfo = TOWER_DICTIONARY[selectedTowerToBuild];
+            if (gameState.money >= tInfo.cost) {
+                gameState.money -= tInfo.cost; SoundSys.build();
+                gameState.towers.push({ x: gx * TILE_SIZE + TILE_SIZE/2, y: gy * TILE_SIZE + TILE_SIZE/2, type: selectedTowerToBuild, level: 0, range: tInfo.range, damage: tInfo.damage, cooldown: tInfo.cooldown, cooldownTimer: 0, lastAngle: 0 });
+                for(let i=0; i<10; i++) gameState.particles.push({ x: gx * TILE_SIZE + TILE_SIZE/2, y: gy * TILE_SIZE + TILE_SIZE/2, vx: (Math.random()-0.5)*100, vy: (Math.random()-0.5)*100, life: 0.5, color: tInfo.color });
+                spawnFloatingText(pos.x, pos.y - 20, `-${tInfo.cost}💰`, '#ef4444'); updateUI();
+            } else { SoundSys.error(); spawnFloatingText(pos.x, pos.y, "אין תקציב!", "#facc15"); }
+        }
+
+        function positionUpgradeMenu(tower) {
+            const menu = document.getElementById('upgrade-menu'); const arrow = document.getElementById('upg-arrow'); menu.classList.remove('hidden-screen');
+            const rect = canvas.getBoundingClientRect(); const scaleX = rect.width / canvas.width; const scaleY = rect.height / canvas.height;
+            let localX = tower.x * scaleX; let localY = tower.y * scaleY; const menuWidth = 192; const menuHeight = 120;
+
+            if (localX - (menuWidth / 2) < 10) localX = (menuWidth / 2) + 10;
+            else if (localX + (menuWidth / 2) > rect.width - 10) localX = rect.width - (menuWidth / 2) - 10;
+
+            if (localY - menuHeight < 10) {
+                menu.style.top = `${localY + 25}px`; menu.style.transform = `translate(-50%, 0)`;
+                if (arrow) arrow.className = "absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 glass-panel border-t border-l border-cyan-500/30 rotate-45 z-[-1]";
+            } else {
+                menu.style.top = `${localY - 25}px`; menu.style.transform = `translate(-50%, -100%)`;
+                if (arrow) arrow.className = "absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 glass-panel border-b border-r border-cyan-500/30 rotate-45 z-[-1]";
+            }
+            menu.style.left = `${localX}px`; updateUpgradeMenu();
+        }
+
+        function updateUpgradeMenu() {
+            if(!selectedExistingTower) return;
+            const menu = document.getElementById('upgrade-menu'); if(menu.classList.contains('hidden-screen')) return;
+            const tData = TOWER_DICTIONARY[selectedExistingTower.type]; const lvl = selectedExistingTower.level;
+            document.getElementById('upg-title').innerText = tData.name; document.getElementById('upg-title').style.color = tData.color; document.getElementById('upg-level').innerText = `רמה ${lvl + 1}`;
+            
+            const btnUpg = document.getElementById('btn-upgrade');
+            if (lvl < tData.upgrades.length) {
+                const nextUpg = tData.upgrades[lvl]; btnUpg.disabled = gameState.money < nextUpg.cost;
+                btnUpg.innerHTML = `<span><i class="fas fa-arrow-up"></i> שדרג</span><span id="upg-cost" class="text-yellow-300">${nextUpg.cost}💰</span>`;
+            } else { btnUpg.disabled = true; btnUpg.innerHTML = `<span class="mx-auto text-slate-400">רמה מקסימלית</span>`; }
+
+            let totalInvested = tData.cost; for(let i=0; i<lvl; i++) totalInvested += tData.upgrades[i].cost;
+            document.getElementById('upg-sell').innerText = `+${Math.floor(totalInvested * 0.5)}💰`;
+        }
+
+        function upgradeSelectedTower() {
+            if(!selectedExistingTower) return;
+            const tData = TOWER_DICTIONARY[selectedExistingTower.type]; const lvl = selectedExistingTower.level;
+            if (lvl < tData.upgrades.length) {
+                const nextUpg = tData.upgrades[lvl];
+                if(gameState.money >= nextUpg.cost) {
+                    gameState.money -= nextUpg.cost; selectedExistingTower.damage = nextUpg.damage; selectedExistingTower.range = nextUpg.range; selectedExistingTower.level++;
+                    SoundSys.upgrade(); spawnFloatingText(selectedExistingTower.x, selectedExistingTower.y - 30, "שודרג!", "#4ade80"); updateUI(); updateUpgradeMenu();
+                }
+            }
+        }
+
+        function sellSelectedTower() {
+            if(!selectedExistingTower) return;
+            const tData = TOWER_DICTIONARY[selectedExistingTower.type]; const lvl = selectedExistingTower.level;
+            let totalInvested = tData.cost; for(let i=0; i<lvl; i++) totalInvested += tData.upgrades[i].cost;
+            const sellValue = Math.floor(totalInvested * 0.5); gameState.money += sellValue;
+            for(let i=0; i<15; i++) gameState.particles.push({ x: selectedExistingTower.x, y: selectedExistingTower.y, vx: (Math.random()-0.5)*80, vy: (Math.random()-0.5)*80, life: 0.4, color: '#94a3b8' });
+            SoundSys.error(); spawnFloatingText(selectedExistingTower.x, selectedExistingTower.y, `+${sellValue}💰`, '#facc15');
+            gameState.towers = gameState.towers.filter(t => t !== selectedExistingTower); document.getElementById('upgrade-menu').classList.add('hidden-screen'); selectedExistingTower = null; updateUI();
+        }
+
+        // =========================================================================
+        // לולאת משחק ורינדור
+        // =========================================================================
+        function drawFortress(ctx, x, y, timeElapsed) {
+            ctx.save(); ctx.translate(x, y);
+            ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.arc(0, 0, 45, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = '#0284c7'; ctx.stroke();
+            ctx.fillStyle = '#1e293b'; ctx.beginPath();
+            for (let i = 0; i < 6; i++) { const angle = (i * Math.PI) / 3 + (timeElapsed * 0.5); ctx.lineTo(Math.cos(angle) * 32, Math.sin(angle) * 32); }
+            ctx.closePath(); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#38bdf8'; ctx.stroke();
+            ctx.shadowBlur = 20 + Math.sin(timeElapsed * 5) * 10; ctx.shadowColor = '#7dd3fc';
+            ctx.fillStyle = '#e0f2fe'; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        }
+
+        function gameLoop(currentTime) {
+            if (appState !== 'PLAYING' || gameOver) return;
+
+            // שימוש במכפיל המהירות החדש (gameSpeed)
+            const deltaTime = Math.min((currentTime - gameState.lastFrameTime) / 1000, 0.1) * gameSpeed;
+            gameState.lastFrameTime = currentTime;
+
+            // רקע
+            ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            ctx.lineWidth = 1;
+            for(let x=0; x<=COLS; x++) { ctx.strokeStyle = (x%4===0)?'rgba(51,65,85,0.4)':'rgba(30,41,59,0.2)'; ctx.beginPath(); ctx.moveTo(x*TILE_SIZE,0); ctx.lineTo(x*TILE_SIZE,CANVAS_HEIGHT); ctx.stroke(); }
+            for(let y=0; y<=ROWS; y++) { ctx.strokeStyle = (y%4===0)?'rgba(51,65,85,0.4)':'rgba(30,41,59,0.2)'; ctx.beginPath(); ctx.moveTo(0,y*TILE_SIZE); ctx.lineTo(CANVAS_WIDTH,y*TILE_SIZE); ctx.stroke(); }
+
+            // שביל
+            ctx.beginPath(); ctx.moveTo(WAYPOINTS[0].x, WAYPOINTS[0].y); for (let i=1; i<WAYPOINTS.length; i++) ctx.lineTo(WAYPOINTS[i].x, WAYPOINTS[i].y);
+            ctx.shadowBlur = 15; ctx.shadowColor = '#0369a1'; ctx.lineWidth = 36; ctx.strokeStyle = '#0f172a'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke(); ctx.shadowBlur = 0;
+            ctx.lineWidth = 32; ctx.strokeStyle = '#1e293b'; ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(WAYPOINTS[0].x, WAYPOINTS[0].y); for (let i=1; i<WAYPOINTS.length; i++) ctx.lineTo(WAYPOINTS[i].x, WAYPOINTS[i].y);
+            ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)'; ctx.setLineDash([15, 10]); ctx.stroke(); ctx.setLineDash([]);
+            drawFortress(ctx, WAYPOINTS[WAYPOINTS.length - 1].x, WAYPOINTS[WAYPOINTS.length - 1].y, gameState.timeElapsed);
+
+            gameState.timeElapsed += deltaTime;
+
+            if (gameState.timeElapsed > 0) {
+                
+                // בוס טבעי כל X שניות
+                if (gameState.timeElapsed > gameState.nextBossTime) {
+                    gameState.nextBossTime += 60;
+                    const mult = 1 + (gameState.timeElapsed / 50);
+                    gameState.enemies.push(spawnEnemyAt('BOSS', mult, false, WAYPOINTS[0].x, WAYPOINTS[0].y, 1));
+                    spawnFloatingText(CANVAS_WIDTH/2, CANVAS_HEIGHT/2, "⚠️ בוס מתקרב! ⚠️", '#ef4444', 3.0, 40);
+                    SoundSys.bossAlert();
+                }
+
+                // אויבים מהתור
+                if (gameState.enemyQueue.length > 0) {
+                    gameState.queueTimer -= deltaTime;
+                    if (gameState.queueTimer <= 0) {
+                        const sent = gameState.enemyQueue.shift();
+                        gameState.enemies.push(spawnEnemyAt(sent.type, sent.hpMultiplier, true, WAYPOINTS[0].x, WAYPOINTS[0].y, 1));
+                        gameState.queueTimer = 0.6;
+                    }
+                }
+
+                // זימון טבעי גלים
+                gameState.baseSpawnTimer -= deltaTime;
+                if (gameState.baseSpawnTimer <= 0) {
+                    const mult = 1 + (gameState.timeElapsed / 60);
+                    // גיוון סוגים באופן טבעי
+                    let r = Math.random(); let type = 'FIGHTER';
+                    if(r < 0.25) type = 'SCOUT'; else if(r > 0.8) type = 'TANK';
+                    gameState.enemies.push(spawnEnemyAt(type, mult, false, WAYPOINTS[0].x, WAYPOINTS[0].y, 1));
+                    gameState.baseSpawnTimer = 0.8 + Math.random() * 1.5;
+                }
+
+                // AI חכם יותר
+                if (gameState.gameMode === 'AI' && !gameState.isDead) {
+                    const ai = gameState.ai; const aiClearRate = 40 + (gameState.timeElapsed * 1.5);
+                    if (ai.defenseLoad > 0) { ai.defenseLoad -= aiClearRate * deltaTime; ai.money += (12 + gameState.timeElapsed * 0.1) * deltaTime; } 
+                    else { ai.defenseLoad = 0; ai.money += (18 + gameState.timeElapsed * 0.3) * deltaTime; }
+
+                    if (ai.defenseLoad > 400 + (gameState.timeElapsed * 2)) {
+                        ai.lives--; gameState.opponentLives = ai.lives; ai.defenseLoad -= 150; updateUI();
+                        spawnFloatingText(CANVAS_WIDTH/2, CANVAS_HEIGHT/2, "😱", '#fff', 2.0, 40); // AI בוכה
+                        if (ai.lives <= 0) triggerGameOver('🎉 ה-AI נוצח!', 'הצלחת לשבור את הגנות המחשב.');
+                    }
+
+                    ai.attackCooldown -= deltaTime;
+                    if (ai.attackCooldown <= 0) {
+                        if(ai.money >= 200 && Math.random() < 0.3) {
+                            ai.money -= 200; ai.outgoingQueue.push('BOSS'); ai.attackCooldown = 15;
+                        } else if(ai.money >= 80 && Math.random() < 0.4) {
+                            ai.money -= 80; ai.outgoingQueue.push('TANK'); ai.attackCooldown = 6;
+                        } else if(ai.money >= 40) {
+                            ai.money -= 40; ai.outgoingQueue.push('FIGHTER'); ai.attackCooldown = 3;
+                        } else { ai.attackCooldown = 1; }
+                    }
+
+                    if (ai.outgoingQueue.length > 0) {
+                        ai.outgoingTimer -= deltaTime;
+                        if (ai.outgoingTimer <= 0) {
+                            const type = ai.outgoingQueue.shift();
+                            gameState.enemyQueue.push({ isSent: true, type: type, hpMultiplier: 1 + (Math.max(0, gameState.timeElapsed) / 50) });
+                            ai.outgoingTimer = 0.8;
+                        }
+                    }
+                }
+            } else {
+                ctx.fillStyle = 'rgba(2, 6, 23, 0.7)'; ctx.fillRect(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctx.fillStyle = '#38bdf8'; ctx.font = 'bold 60px Rubik'; ctx.textAlign = 'center'; ctx.fillText(Math.ceil(-gameState.timeElapsed), CANVAS_WIDTH/2, CANVAS_HEIGHT/2);
+                ctx.font = '20px Rubik'; ctx.fillStyle = '#94a3b8'; ctx.fillText('הכן את ההגנות...', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 + 40);
+            }
+
+            // תנועת אויבים
+            for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+                const enemy = gameState.enemies[i]; const target = WAYPOINTS[enemy.waypointIndex];
+                const dx = target.x - enemy.x; const dy = target.y - enemy.y; const distance = Math.hypot(dx, dy); let currentAngle = Math.atan2(dy, dx);
+
+                if (distance > enemy.speed * deltaTime) {
+                    enemy.x += (dx / distance) * enemy.speed * deltaTime; enemy.y += (dy / distance) * enemy.speed * deltaTime;
+                } else {
+                    enemy.x = target.x; enemy.y = target.y; enemy.waypointIndex++;
+                    if (enemy.waypointIndex >= WAYPOINTS.length) {
+                        gameState.lives--; SoundSys.error(); gameState.enemies.splice(i, 1); updateUI(); checkDeath(); continue;
+                    }
+                }
+
+                ctx.save(); ctx.translate(enemy.x, enemy.y); ctx.rotate(currentAngle);
+                ctx.shadowBlur = 10; ctx.shadowColor = enemy.color; ctx.beginPath();
+                if(enemy.type === 'TANK' || enemy.type === 'BOSS') {
+                    ctx.moveTo(enemy.radius, 0); ctx.lineTo(enemy.radius*0.5, enemy.radius*0.8); ctx.lineTo(-enemy.radius*0.8, enemy.radius*0.8); ctx.lineTo(-enemy.radius, 0); ctx.lineTo(-enemy.radius*0.8, -enemy.radius*0.8); ctx.lineTo(enemy.radius*0.5, -enemy.radius*0.8);
+                } else {
+                    ctx.moveTo(enemy.radius, 0); ctx.lineTo(-enemy.radius, enemy.radius * 0.8); ctx.lineTo(-enemy.radius * 0.4, 0); ctx.lineTo(-enemy.radius, -enemy.radius * 0.8);
+                }
+                ctx.closePath(); ctx.fillStyle = '#0f172a'; ctx.fill(); ctx.lineWidth = enemy.type==='BOSS'?3:2; ctx.strokeStyle = enemy.color; ctx.stroke();
+                ctx.restore(); ctx.shadowBlur = 0;
+
+                const hpPercent = enemy.hp / enemy.maxHp;
+                ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(enemy.x - 14, enemy.y - 24, 28, 4);
+                ctx.fillStyle = enemy.isSent ? '#c084fc' : (hpPercent > 0.5 ? '#22c55e' : (hpPercent > 0.2 ? '#eab308' : '#ef4444'));
+                ctx.fillRect(enemy.x - 14, enemy.y - 24, 28 * hpPercent, 4);
+            }
+
+            // מגדלים
+            gameState.towers.forEach(tower => {
+                const tData = TOWER_DICTIONARY[tower.type]; const isSelected = selectedExistingTower === tower;
+                if(isSelected) { ctx.beginPath(); ctx.arc(tower.x, tower.y, tower.range, 0, Math.PI*2); ctx.fillStyle = 'rgba(56, 189, 248, 0.1)'; ctx.fill(); ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)'; ctx.lineWidth = 1; ctx.stroke(); }
+                ctx.fillStyle = '#020617'; ctx.beginPath(); ctx.arc(tower.x, tower.y, 18, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 2 + tower.level; ctx.strokeStyle = tData.color; ctx.stroke();
+
+                tower.cooldownTimer -= deltaTime; let targetEnemy = null; let minDistance = tower.range;
+                gameState.enemies.forEach(enemy => { const dist = Math.hypot(enemy.x - tower.x, enemy.y - tower.y); if (dist < minDistance) { minDistance = dist; targetEnemy = enemy; } });
+
+                let angle = tower.lastAngle || 0; let fired = false;
+                if (targetEnemy) {
+                    angle = Math.atan2(targetEnemy.y - tower.y, targetEnemy.x - tower.x); tower.lastAngle = angle;
+                    if (tower.cooldownTimer <= 0) {
+                        tower.cooldownTimer = tower.cooldown; fired = true;
+                        gameState.projectiles.push({ x1: tower.x, y1: tower.y, x2: targetEnemy.x, y2: targetEnemy.y, life: (tower.type === 'RAPID' ? 0.05 : 0.1), color: tData.projColor, width: (tower.type === 'SNIPER' ? 5 : 3) });
+                        if(tower.type==='BASIC') SoundSys.shootBasic(); else if(tower.type==='SNIPER') SoundSys.shootSniper(); else SoundSys.shootLaser();
+                        
+                        targetEnemy.hp -= tower.damage;
+                        if (targetEnemy.hp <= 0 && !targetEnemy.dead) {
+                            targetEnemy.dead = true; gameState.money += targetEnemy.moneyReward; updateUI(); SoundSys.explosion(); spawnFloatingText(targetEnemy.x, targetEnemy.y, `+${targetEnemy.moneyReward}`, '#facc15');
+                            for(let k=0; k<20; k++) gameState.particles.push({ x: targetEnemy.x, y: targetEnemy.y, vx: (Math.random() - 0.5) * 200, vy: (Math.random() - 0.5) * 200, life: 0.2 + Math.random() * 0.4, color: targetEnemy.color });
+                            
+                            // *** פיצול בוס ***
+                            if(targetEnemy.type === 'BOSS') {
+                                for(let s=0; s<3; s++) {
+                                    let offsetX = (Math.random()-0.5)*30; let offsetY = (Math.random()-0.5)*30;
+                                    gameState.enemies.push(spawnEnemyAt('FIGHTER', targetEnemy.maxHp/400, false, targetEnemy.x + offsetX, targetEnemy.y + offsetY, targetEnemy.waypointIndex));
+                                }
+                            }
+                        } else {
+                            for(let k=0; k<4; k++) gameState.particles.push({ x: targetEnemy.x, y: targetEnemy.y, vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100, life: 0.1 + Math.random() * 0.15, color: tData.projColor });
+                        }
+                    }
+                }
+
+                ctx.save(); ctx.translate(tower.x, tower.y); ctx.rotate(angle); ctx.fillStyle = '#475569';
+                if(tower.type === 'SNIPER') { ctx.fillRect(0, -3, 30, 6); ctx.fillStyle = tData.color; ctx.fillRect(26, -4, 6, 8); } 
+                else if(tower.type === 'RAPID') { ctx.fillRect(0, -6, 15, 4); ctx.fillRect(0, 2, 15, 4); if(fired) { ctx.fillStyle = tData.color; ctx.fillRect(15, -7, 5, 14); } } 
+                else { ctx.fillRect(0, -4, 20, 8); ctx.fillStyle = tData.color; ctx.fillRect(16, -3, 6, 6); }
+                if(fired && tower.type !== 'RAPID') ctx.translate(-3, 0);
+                ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = tData.color; ctx.stroke();
+                ctx.fillStyle = '#fff'; for(let l=0; l<tower.level; l++) { ctx.beginPath(); ctx.arc(-5 + l*5, 0, 1.5, 0, Math.PI*2); ctx.fill(); }
+                ctx.restore();
+            });
+
+            gameState.enemies = gameState.enemies.filter(e => e.hp > 0 && !e.dead);
+
+            // אפקטים
+            for (let i = gameState.projectiles.length - 1; i >= 0; i--) {
+                const p = gameState.projectiles[i]; p.life -= deltaTime;
+                if (p.life > 0) { ctx.shadowBlur = 8; ctx.shadowColor = p.color; ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.strokeStyle = p.color; ctx.lineWidth = p.width; ctx.lineCap = 'round'; ctx.stroke(); ctx.shadowBlur = 0; } 
+                else { gameState.projectiles.splice(i, 1); }
+            }
+            for (let i = gameState.particles.length - 1; i >= 0; i--) {
+                const p = gameState.particles[i]; p.life -= deltaTime;
+                if (p.life > 0) { p.x += p.vx * deltaTime; p.y += p.vy * deltaTime; ctx.globalAlpha = Math.max(0, p.life * 2); ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1.0; } 
+                else { gameState.particles.splice(i, 1); }
+            }
+            for (let i = gameState.floatingTexts.length - 1; i >= 0; i--) {
+                const ft = gameState.floatingTexts[i]; ft.life -= deltaTime;
+                if(ft.life > 0) { ft.y -= 20 * deltaTime; ctx.globalAlpha = ft.life; ctx.font = `bold ${ft.size||16}px Rubik`; ctx.textAlign = 'center'; ctx.fillStyle = '#000'; ctx.fillText(ft.text, ft.x+1, ft.y+1); ctx.fillStyle = ft.color; ctx.fillText(ft.text, ft.x, ft.y); ctx.globalAlpha = 1.0; } 
+                else { gameState.floatingTexts.splice(i, 1); }
+            }
+
+            // Hover לבנייה
+            if(hoverGridX >= 0 && hoverGridY >= 0 && !gameOver && gameState.timeElapsed > 0) {
+                const tInfo = TOWER_DICTIONARY[selectedTowerToBuild]; const cx = hoverGridX * TILE_SIZE + TILE_SIZE/2; const cy = hoverGridY * TILE_SIZE + TILE_SIZE/2;
+                const hasTower = gameState.towers.some(t => Math.floor(t.x/TILE_SIZE) === hoverGridX && Math.floor(t.y/TILE_SIZE) === hoverGridY);
+                if(!hasTower) {
+                    ctx.beginPath(); ctx.arc(cx, cy, tInfo.range, 0, Math.PI*2);
+                    const isValid = !grid[hoverGridX][hoverGridY] && gameState.money >= tInfo.cost;
+                    ctx.fillStyle = isValid ? 'rgba(56, 189, 248, 0.1)' : 'rgba(239, 68, 68, 0.1)'; ctx.fill(); ctx.strokeStyle = isValid ? 'rgba(56, 189, 248, 0.4)' : 'rgba(239, 68, 68, 0.4)'; ctx.lineWidth = 1; ctx.stroke();
+                    ctx.globalAlpha = 0.5; ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = tInfo.color; ctx.stroke(); ctx.globalAlpha = 1.0;
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>
