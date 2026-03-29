@@ -104,6 +104,9 @@
             const [remoteId, setRemoteId] = useState('');
             const [conn, setConn] = useState(null);
             const peerRef = useRef(null);
+            const [myReady, setMyReady] = useState(false);
+            const [opponentBoard, setOpponentBoard] = useState(null);
+            const [incomingMsg, setIncomingMsg] = useState(null);
 
             useEffect(() => {
                 if (gameMode === 'ai' && turn === 2 && gameState === 'playing' && !combatMsg) {
@@ -146,9 +149,61 @@
                 }
             }, [turn, gameMode, gameState]);
 
+            const setupConnection = (connection, playerNum) => {
+                connection.on('open', () => {
+                    setGameState('setup');
+                    initSetup(playerNum);
+                });
+                connection.on('data', (data) => {
+                    setIncomingMsg(data);
+                });
+                connection.on('close', () => {
+                    alert('היריב התנתק מן השרת');
+                    window.location.reload();
+                });
+            };
+
+            const initPeer = () => {
+                // יצירת קוד קצר וקליט להעתקה
+                const customId = Math.random().toString(36).substring(2, 8).toUpperCase();
+                const peer = new Peer(customId);
+                peer.on('open', (id) => setPeerId(id));
+                peer.on('connection', (connection) => {
+                    setConn(connection);
+                    setMyPlayerNum(1); // המארח הוא תמיד שחקן 1 (אדום)
+                    setupConnection(connection, 1);
+                });
+                peerRef.current = peer;
+            };
+
+            const connectToPeer = () => {
+                if (!remoteId || !peerRef.current) return;
+                const connection = peerRef.current.connect(remoteId);
+                setConn(connection);
+                setMyPlayerNum(2); // המתארח הוא שחקן 2 (כחול)
+                setupConnection(connection, 2);
+            };
+
+            const mergeBoards = (myB, oppB) => {
+                let nb = Array(10).fill(null).map(() => Array(10).fill(null));
+                for(let r=0; r<10; r++) {
+                    for(let c=0; c<10; c++) {
+                        if (myB[r][c]) nb[r][c] = myB[r][c];
+                        if (oppB[r][c]) nb[r][c] = oppB[r][c];
+                    }
+                }
+                setBoard(nb);
+                setGameState('playing');
+                setTurn(1);
+            };
+
             const startMode = (mode) => {
                 setGameMode(mode);
-                if (mode === 'online') return;
+                if (mode === 'online') {
+                    setGameState('lobby');
+                    initPeer();
+                    return;
+                }
                 initSetup(1);
             };
 
@@ -190,16 +245,6 @@
                 setDeck([]);
             };
 
-            const finishSetup = () => {
-                if (gameMode === 'local' && myPlayerNum === 1) {
-                    initSetup(2);
-                } else {
-                    setGameState('playing');
-                    setTurn(1);
-                    setMyPlayerNum(1);
-                }
-            };
-
             const getValidMoves = (r, c, b) => {
                 const piece = b[r][c];
                 if (!piece || piece.rank === 'B' || piece.rank === 'F') return [];
@@ -230,7 +275,7 @@
                 return Number(attacker.rank) > Number(defender.rank) ? 'attacker' : 'defender';
             };
 
-            const executeMove = (fr, fc, tr, tc) => {
+            const executeMove = useCallback((fr, fc, tr, tc, isRemote = false) => {
                 let newBoard = board.map(row => [...row]);
                 let attacker = newBoard[fr][fc];
                 let defender = newBoard[tr][tc];
@@ -264,6 +309,47 @@
                 setSelected(null);
                 setValidMoves([]);
                 if (combatResultStr) setCombatMsg(combatResultStr);
+
+                // שידור המהלך ליריב אם אנחנו במצב רשת
+                if (gameMode === 'online' && !isRemote && conn) {
+                    conn.send({ type: 'MOVE', fr, fc, tr, tc });
+                }
+            }, [board, turn, gameMode, conn]);
+
+            // האזנה להודעות מהרשת וסינכרון הלוח
+            useEffect(() => {
+                if (!incomingMsg) return;
+                const msg = incomingMsg;
+                setIncomingMsg(null); // ניקוי מידי
+
+                if (msg.type === 'SETUP_READY') {
+                    setOpponentBoard(msg.board);
+                    if (myReady) {
+                        mergeBoards(board, msg.board);
+                    }
+                } else if (msg.type === 'MOVE') {
+                    executeMove(msg.fr, msg.fc, msg.tr, msg.tc, true);
+                }
+            }, [incomingMsg, board, myReady, executeMove]);
+
+            const finishSetup = () => {
+                if (gameMode === 'local' && myPlayerNum === 1) {
+                    initSetup(2);
+                } else if (gameMode === 'online') {
+                    setMyReady(true);
+                    conn.send({ type: 'SETUP_READY', board: board });
+                    if (opponentBoard) {
+                        // אם היריב כבר סיים, נאחד את הלוחות
+                        mergeBoards(board, opponentBoard);
+                    } else {
+                        // אחרת, נחכה לו
+                        setGameState('waiting_opponent');
+                    }
+                } else {
+                    setGameState('playing');
+                    setTurn(1);
+                    setMyPlayerNum(1);
+                }
             };
 
             const handleCellClick = (r, c) => {
@@ -299,7 +385,7 @@
                 }
             };
 
-            const boardRotation = (gameMode === 'local' && turn === 2) ? 180 : 0;
+            const boardRotation = (gameMode === 'local' && turn === 2) || (gameMode === 'online' && myPlayerNum === 2) ? 180 : 0;
 
             if (!motion || !AnimatePresence) {
                 return <div className="p-10 text-center">טוען אנימציות...</div>;
@@ -331,8 +417,64 @@
                             >
                                 <MenuButton onClick={() => startMode('ai')} color="blue" label="מערכה נגד ה-AI" icon={<Icons.Target />} />
                                 <MenuButton onClick={() => startMode('local')} color="emerald" label="קרב מקומי (1vs1)" icon={<Icons.Swords />} />
-                                <MenuButton onClick={() => startMode('online')} color="purple" label="זירה בינלאומית" icon={<Icons.Star />} disabled />
+                                <MenuButton onClick={() => startMode('online')} color="purple" label="זירה בינלאומית" icon={<Icons.Star />} />
                                 <p className="text-[10px] text-center text-slate-500 font-medium">גרסת Pro v2.4.1</p>
+                            </motion.div>
+                        )}
+
+                        {gameState === 'lobby' && (
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }}
+                                className="glass p-10 rounded-[2.5rem] shadow-2xl flex flex-col gap-6 w-full max-w-md relative z-10 text-center"
+                            >
+                                <h2 className="text-2xl font-black text-purple-400">זירה בינלאומית</h2>
+                                
+                                <div className="bg-slate-900/50 p-6 rounded-2xl border border-white/5">
+                                    <p className="text-sm text-slate-400 mb-2 font-bold">קוד הזיהוי שלך</p>
+                                    {peerId ? (
+                                        <div className="text-3xl font-mono text-white tracking-widest bg-black/30 py-3 rounded-xl shadow-inner select-all">
+                                            {peerId}
+                                        </div>
+                                    ) : (
+                                        <div className="animate-pulse text-slate-500 py-3">מייצר קוד התחברות...</div>
+                                    )}
+                                    <p className="text-[10px] text-slate-500 mt-2">שלח קוד זה ליריב כדי שיוכל להתחבר אליך</p>
+                                </div>
+
+                                <div className="flex items-center gap-4 my-2">
+                                    <div className="h-px bg-white/10 flex-1"></div>
+                                    <span className="text-xs font-bold text-slate-500">או</span>
+                                    <div className="h-px bg-white/10 flex-1"></div>
+                                </div>
+
+                                <div className="flex flex-col gap-3">
+                                    <p className="text-sm text-slate-400 font-bold">התחבר ליריב</p>
+                                    <input 
+                                        type="text" 
+                                        placeholder="הכנס קוד יריב כאן..." 
+                                        value={remoteId}
+                                        onChange={e => setRemoteId(e.target.value.toUpperCase())}
+                                        className="bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-center text-lg font-mono text-white focus:outline-none focus:border-purple-500 transition-colors"
+                                        dir="ltr"
+                                    />
+                                    <button 
+                                        onClick={connectToPeer}
+                                        disabled={!remoteId || !peerId}
+                                        className="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:hover:bg-purple-600 py-3 rounded-xl font-bold shadow-lg shadow-purple-600/20 transition-all active:scale-95"
+                                    >
+                                        התחבר והתחל קרב
+                                    </button>
+                                </div>
+                                
+                                <button onClick={() => { setGameState('menu'); peerRef.current?.destroy(); }} className="text-sm text-slate-500 hover:text-white transition-colors mt-2">חזור לתפריט</button>
+                            </motion.div>
+                        )}
+
+                        {gameState === 'waiting_opponent' && (
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass p-10 rounded-[2.5rem] flex flex-col items-center justify-center gap-6 z-10 w-full max-w-md text-center">
+                                <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                                <h2 className="text-2xl font-black">ממתין לפריסת כוחות של היריב...</h2>
+                                <p className="text-slate-400 text-sm">הקרב יתחיל מיד כשהיריב יאשר את המערך שלו.</p>
                             </motion.div>
                         )}
 
